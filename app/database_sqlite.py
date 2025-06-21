@@ -1,10 +1,11 @@
-import sqlite3 # заменить sqlite3 на aiosqlite для асинхронности
-
+# import sqlite3
+# заменить sqlite3 на aiosqlite для асинхронности
+import aiosqlite
 DB_NAME = "database.sqlite"
 
 
-def get_sqlite_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row  # Это позволяет получать данные в виде словаря
-    return conn
+async def get_sqlite_connection():
+    async with aiosqlite.connect(DB_NAME) as conn:
+        conn.row_factory = aiosqlite.Row
+        yield conn
 
