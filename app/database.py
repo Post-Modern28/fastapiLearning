@@ -1,7 +1,8 @@
 import asyncpg
-# DATABASE_URL = "postgresql://mikhail:parol@localhost:5432/postgres"
 
-
+from app.config import load_config
+config = load_config()
+DATABASE_URL=config.db.database_url
 async def get_db_connection():
     conn = await asyncpg.connect(DATABASE_URL)
     try:
@@ -12,7 +13,6 @@ async def get_db_connection():
 
 
 
-DATABASE_URL = "postgresql://postgres:1467@localhost:5432/postgres"
 
 # from typing import Optional
 #
