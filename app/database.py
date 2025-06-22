@@ -12,8 +12,6 @@ async def get_db_connection():
 
 
 
-
-
 DATABASE_URL = "postgresql://postgres:1467@localhost:5432/postgres"
 
 # from typing import Optional

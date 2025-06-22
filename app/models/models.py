@@ -122,7 +122,8 @@ class Item(BaseModel):
     tax: float | None = None
 
 class Todo(BaseModel):
-    id: Optional[int] = None
+    id: Optional[int] = 1
     title: str = ''
     description: str = ''
     completed: bool = False
+    user_id: int

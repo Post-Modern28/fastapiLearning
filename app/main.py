@@ -5,7 +5,7 @@ from typing import List
 
 import aiosqlite
 import uvicorn
-from asyncpg import UniqueViolationError
+from asyncpg.exceptions import UniqueViolationError
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -47,30 +47,64 @@ async def create_item(item: Item, db: asyncpg.Connection = Depends(get_db_connec
     return {"message": "Item added successfully!"}
 
 
+# @app.post('/register')
+# async def register_user(user: User, db: aiosqlite.Connection = Depends(get_sqlite_connection)): # заменить sqlite3 на aiosqlite для асинхронности
+#     await db.execute("""
+#         INSERT INTO users (username, password) VALUES($1, $2)
+#     """, (user.username, user.password))
+#     await db.commit()
+#     return {"message": "User registered successfully"}
+
 @app.post('/register')
-async def register_user(user: User, db: aiosqlite.Connection = Depends(get_sqlite_connection)): # заменить sqlite3 на aiosqlite для асинхронности
+async def register_user(user: User, db: asyncpg.Connection = Depends(get_db_connection)): # заменить sqlite3 на aiosqlite для асинхронности
     await db.execute("""
         INSERT INTO users (username, password) VALUES($1, $2)
-    """, (user.username, user.password))
-    await db.commit()
+    """, user.username, user.password)
     return {"message": "User registered successfully"}
 
+@app.delete('/delete_user/{user_id}')
+async def delete_user(user_id: int, db: asyncpg.Connection = Depends(get_db_connection)): # заменить sqlite3 на aiosqlite для асинхронности
+    result = await db.execute("""
+            DELETE FROM users WHERE id = $1
+        """, user_id)
+
+    if result == "DELETE 0":
+        return JSONResponse(status_code=404, content={"message": "User not found"})
+
+    return {"message": "User and his todos are successfully deleted!"}
+
+
+VALID_TABLES = {"users", "ThingsToDo"}
+
+async def check_by_id(item_id: int, table_name: str, db: asyncpg.Connection):
+    """
+    Checks whether item with such ID exists in a table
+    :return: True if item exists in table, False otherwise
+    """
+    if table_name not in VALID_TABLES:
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
+    query = f"SELECT * FROM {table_name} WHERE id = $1"
+    item_exists = await db.fetchrow(query, item_id)
+    return bool(item_exists)
 
 @app.post('/create_note')
 async def create_note(note: Todo, db: asyncpg.Connection = Depends(get_db_connection)):
+    if not await check_by_id(note.user_id, 'users', db):
+        return JSONResponse(status_code=404, content={"message": "User not found"})
     try:
         await db.execute("""
-            INSERT INTO ThingsToDo(id, title, description, completed)
-            VALUES($1, $2, $3, $4)
-        """, note.id, note.title, note.description, note.completed)
+            INSERT INTO ThingsToDo(id, title, description, completed, user_id)
+            VALUES($1, $2, $3, $4, $5)
+        """, note.id, note.title, note.description, note.completed, note.user_id)
         return {"message": "Item added with custom ID", "id": note.id}
 
     except UniqueViolationError:
         row = await db.fetchrow("""
-            INSERT INTO ThingsToDo(title, description, completed)
-            VALUES($1, $2, $3)
+            INSERT INTO ThingsToDo(title, description, completed, user_id)
+            VALUES($1, $2, $3, $4)
             RETURNING id
-        """, note.title, note.description, note.completed)
+        """, note.title, note.description, note.completed, note.user_id)
         return {"message": "ID already taken, inserted with auto ID", "id": row["id"]}
 
 @app.get('/get_note/{note_id}', response_model=Todo)
@@ -98,14 +132,18 @@ async def delete_note(note_id: int, db: asyncpg.Connection = Depends(get_db_conn
 
 @app.put('/update_note/{note_id}')
 async def update_note(note_id: int, note: Todo, db: asyncpg.Connection = Depends(get_db_connection)):
+    if not await check_by_id(note.user_id, 'users', db):
+        return JSONResponse(status_code=404, content={"message": "User not found"})
+
     result = await db.execute("""
         UPDATE ThingsToDo
-        SET title = $1, description = $2, completed=$3
+        SET title = $1, description = $2, completed=$3, user_id=$5
         WHERE id = $4
-    """, note.title, note.description, note.completed, note_id)
+    """, note.title, note.description, note.completed, note_id, note.user_id)
     if result == 'UPDATE 1':
         return JSONResponse(status_code=200, content={"message": "Item successfully updated!"})
     return JSONResponse(status_code=404, content={"message": "Item not found."})
+
 
 # === RUN ===
 
