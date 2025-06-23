@@ -83,17 +83,22 @@ class UserBase(BaseModel):
 class UserInDB(UserBase):
     hashed_password: str
 
+
 class User(UserBase):
     """Модель пользователя с базовыми полями"""
+
     full_name: str | None = None
     email: EmailStr | None = None
     disabled: bool = False
     roles: list[str]  # Список ролей пользователя
 
+
 class UserLogin(BaseModel):
     """Модель для входа в систему"""
+
     username: str
     password: str
+
 
 class Feedback(BaseModel):
     name: str
@@ -126,10 +131,12 @@ class Item(BaseModel):
     price: float
     tax: float | None = None
 
+
 class Todo(BaseModel):
-    title: str = ''
-    description: str = ''
+    title: str = ""
+    description: str = ""
     user_id: int
+
 
 class TodoReturn(Todo):
     id: int

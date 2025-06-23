@@ -1,5 +1,3 @@
-
-
 #
 # # === AUTH ===
 #
@@ -97,23 +95,6 @@
 # @app.get("/login")
 # async def log_in(user: User = Depends(auth_user_dep)):
 #     return {"message": f"Welcome, {user.username}!"}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # SESSION_MAX_AGE = 60  # 5 minutes
