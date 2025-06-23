@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException
@@ -122,8 +123,12 @@ class Item(BaseModel):
     tax: float | None = None
 
 class Todo(BaseModel):
-    id: Optional[int] = 1
     title: str = ''
     description: str = ''
-    completed: bool = False
     user_id: int
+
+class TodoReturn(Todo):
+    id: int
+    completed: bool = False
+    created_at: datetime = datetime.now()
+    completed_at: datetime | None = None
