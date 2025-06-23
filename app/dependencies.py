@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from security import get_user_from_token
+from app.security.security import get_user_from_token
 from db import get_user
 from models.models import User
 

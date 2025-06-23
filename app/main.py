@@ -1,26 +1,18 @@
 from datetime import datetime
 import os
-import secrets
-import sqlite3
-from typing import List, Optional
+from typing import Optional
 import calendar
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-import aiosqlite
 import uvicorn
-from asyncpg.exceptions import UniqueViolationError
-from fastapi import Depends, FastAPI, HTTPException, status, Query
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
+from fastapi import HTTPException, Query
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPBasic
 from passlib.context import CryptContext
 
 from app.config import load_config
-from app.models.models import User, UserInDB, Todo, TodoReturn
+from app.models.models import User, Todo, TodoReturn
 from fastapi import FastAPI, Depends
-from pydantic import BaseModel
-from database import get_db_connection, VALID_TABLES
-from database_sqlite import get_sqlite_connection
+from app.database.database import get_db_connection, VALID_TABLES
 import asyncpg
 
 
@@ -123,9 +115,7 @@ async def get_note(
         db: asyncpg.Connection = Depends(get_db_connection)):
     order = 'DESC' if sort_by.startswith('-') else 'ASC'
     column = sort_by.lstrip('-')
-    # allowed_sort_fields = ['id', 'title', 'description', 'completed', 'user_id', 'created_at', 'completed_at']
     allowed_sort_fields = await get_table_columns("thingstodo", db)
-    print(column, allowed_sort_fields)
     if column not in allowed_sort_fields:
         raise HTTPException(status_code=400, detail="Invalid sort field")
 
@@ -222,7 +212,7 @@ async def complete_notes(ids: list[int] = Query(...), completed: bool = True, db
 
 @app.get('/notes/analytics')
 async def get_todos_analytics(
-        timezone: str = Query(...),
+        timezone: str = Query('Europe/Moscow'),
         db: asyncpg.Connection = Depends(get_db_connection)):
     try:
         tz = ZoneInfo(timezone)
