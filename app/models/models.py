@@ -131,6 +131,8 @@ class Item(BaseModel):
     price: float
     tax: float | None = None
 
+class ItemsResponse(BaseModel):
+    item_id: int
 
 class Todo(BaseModel):
     title: str = ""
@@ -143,3 +145,9 @@ class TodoReturn(Todo):
     completed: bool = False
     created_at: datetime = datetime.now()
     completed_at: datetime | None = None
+
+class CustomExceptionModel(BaseModel):
+    status_code: int
+    er_message: str
+    er_details: str
+

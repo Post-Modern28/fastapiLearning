@@ -8,14 +8,14 @@ import asyncpg
 import uvicorn
 from exception_handlers import *
 from exceptions import *
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic
 from passlib.context import CryptContext
 
 from app.config import load_config
 from app.database.database import VALID_TABLES, get_db_connection
-from app.models.models import Todo, TodoReturn, User
+from app.models.models import Todo, TodoReturn, User, ItemsResponse
 
 # ===HELPERS===
 
@@ -67,7 +67,36 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DOCS_USER = os.getenv("DOCS_USER")
 DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 
+import logging
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
+# Настроим базовый логгер
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
+app.add_exception_handler(CustomException, custom_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
+
+# @app.exception_handler(Exception)
+
+
+
+@app.get(
+    "/items/{item_id}/",
+    response_model=ItemsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Items by ID.",
+    description="The endpoint returns item_id by ID. If the item_id is 42, an exception with the status code 404 is returned.",
+    responses={
+        status.HTTP_200_OK: {'model': ItemsResponse},
+        status.HTTP_404_NOT_FOUND: {'model': CustomExceptionModel},  # вот тут применяем схемы ошибок пидантика
+    },
+)
+async def read_item(item_id: int):
+    if item_id == 42:
+        raise CustomException(detail="Item not found", status_code=404, message="You're trying to get an item that doesn't exist. Try entering a different item_id.")
+    return ItemsResponse(item_id=item_id)
 
 
 @app.post("/register")
@@ -259,7 +288,7 @@ async def get_todos_analytics(
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     try:
-        tz = ZoneInfo(timezone)
+        ZoneInfo(timezone)
     except ZoneInfoNotFoundError:
         raise HTTPException(status_code=400, detail="Invalid timezone")
 
