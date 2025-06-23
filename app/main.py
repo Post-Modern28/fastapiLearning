@@ -3,7 +3,8 @@ import os
 import secrets
 import sqlite3
 from typing import List, Optional
-
+import calendar
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import aiosqlite
 import uvicorn
 from asyncpg.exceptions import UniqueViolationError
@@ -219,7 +220,54 @@ async def complete_notes(ids: list[int] = Query(...), completed: bool = True, db
     return JSONResponse(content={"updated_count": int(num_updated)})
 
 
+@app.get('/notes/analytics')
+async def get_todos_analytics(
+        timezone: str = Query(...),
+        db: asyncpg.Connection = Depends(get_db_connection)):
+    try:
+        tz = ZoneInfo(timezone)
+    except ZoneInfoNotFoundError:
+        raise HTTPException(status_code=400, detail="Invalid timezone")
 
+    total = await db.fetchval("""
+        SELECT COUNT(*) 
+        FROM ThingsToDo
+        """)
+    status_counts = await db.fetch("""
+        SELECT completed, COUNT(*) as count 
+        FROM ThingsToDo
+        GROUP BY completed
+    """)
+    completed_stats = {str(row["completed"]).lower(): row["count"] for row in status_counts}
+    avg_completion_time = await db.fetchval("""
+        SELECT AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) / 3600) 
+        FROM ThingsToDo
+        WHERE completed = true
+    """)
+
+    weekday_raw = await db.fetch("""
+            SELECT
+                to_char(created_at AT TIME ZONE $1, 'Day') as weekday,
+                EXTRACT(DOW FROM created_at AT TIME ZONE $1) as dow,
+                COUNT(*) as count
+            FROM ThingsToDo
+            GROUP BY weekday, dow
+            ORDER BY dow
+        """, timezone)
+    weekday_distribution = {}
+    for row in weekday_raw:
+        day_name = row["weekday"].strip()
+        weekday_distribution[day_name] = row["count"]
+
+    all_days = list(calendar.day_name)
+    full_weekday_distribution = {day: weekday_distribution.get(day, 0) for day in all_days}
+
+    return {
+        "total": total,
+        "completed_stats": completed_stats,
+        "avg_completion_time_hours": round(avg_completion_time, 2) if avg_completion_time else 0.0,
+        "weekday_distribution": full_weekday_distribution
+    }
 
 # === RUN ===
 
