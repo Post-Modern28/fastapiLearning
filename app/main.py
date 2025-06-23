@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import secrets
 import sqlite3
@@ -20,6 +21,45 @@ from pydantic import BaseModel
 from database import get_db_connection, VALID_TABLES
 from database_sqlite import get_sqlite_connection
 import asyncpg
+
+
+# ===HELPERS===
+
+async def get_table_columns(table_name: str, db: asyncpg.Connection) -> list[str]:
+    rows = await db.fetch("""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = $1
+    """, table_name)
+    return [row['column_name'] for row in rows]
+
+async def check_by_id(item_id: int, table_name: str, db: asyncpg.Connection):
+    """
+    Checks whether item with such ID exists in a table
+    :return: True if item exists in table, False otherwise
+    """
+    if table_name not in VALID_TABLES:
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
+    query = f"SELECT * FROM {table_name} WHERE id = $1"
+    item_exists = await db.fetchrow(query, item_id)
+    return bool(item_exists)
+
+
+def parse_custom_datetime(value: Optional[str] = Query(None)) -> Optional[datetime]:
+    print("Value is", value)
+    if value is None:
+        return None
+    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%Y %H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    raise ValueError("Неверный формат даты")
+
+
+
+
 
 # === CONFIG & INIT ===
 
@@ -76,6 +116,9 @@ async def get_note(
         sort_by: str = 'id',
         completed: Optional[bool] = Query(None),
         user_id: Optional[int] = Query(None),
+        created_before: Optional[datetime] = Query(None),
+        created_after: Optional[datetime] = Query(None),
+        title_contains: Optional[str] = Query(None),
         db: asyncpg.Connection = Depends(get_db_connection)):
     order = 'DESC' if sort_by.startswith('-') else 'ASC'
     column = sort_by.lstrip('-')
@@ -85,22 +128,40 @@ async def get_note(
     if column not in allowed_sort_fields:
         raise HTTPException(status_code=400, detail="Invalid sort field")
 
-    where_clauses = ['true']
+    params = [limit, offset]
+    where_clauses = ['TRUE']
+
     if completed is not None:
-        where_clauses.append(f'completed = {completed}')
-    if user_id:
-        if not check_by_id(user_id, 'users', db):
+        where_clauses.append(f"completed = ${len(params) + 1}")
+        params.append(completed)
+
+    if user_id is not None:
+        if not await check_by_id(user_id, 'users', db):
             raise HTTPException(status_code=400, detail="User not found")
-        where_clauses.append(f'user_id = {user_id}')
-    print(f"{' AND '.join(where_clauses)}")
-    res = await db.fetch(f"""
+        where_clauses.append(f"user_id = ${len(params) + 1}")
+        params.append(user_id)
+
+    if created_before is not None:
+        where_clauses.append(f"created_at <= ${len(params) + 1}")
+        params.append(created_before)
+
+    if created_after is not None:
+        where_clauses.append(f"created_at >= ${len(params) + 1}")
+        params.append(created_after)
+
+    if title_contains:
+        where_clauses.append(f"title ILIKE ${len(params) + 1}")
+        params.append(f"%{title_contains}%")
+
+    query = f"""
         SELECT * FROM ThingsToDo
         WHERE {' AND '.join(where_clauses)}
         ORDER BY {column} {order}
         LIMIT $1
         OFFSET $2
-        
-    """, limit, offset)
+    """
+
+    res = await db.fetch(query, *params)
     if not res:
         return JSONResponse(status_code=404, content={"message": "Items not found"})
     return [TodoReturn(**row) for row in res]
@@ -146,27 +207,17 @@ async def update_note(note_id: int, note: Todo, db: asyncpg.Connection = Depends
 
 
 
-# ===HELPERS===
+@app.patch('/complete_notes')
+async def complete_notes(ids: list[int] = Query(...), completed: bool = True, db: asyncpg.Connection = Depends(get_db_connection)):
+    result = await db.execute("""
+            UPDATE ThingsToDo
+            SET completed = $1,
+                completed_at = CASE WHEN $1 THEN CURRENT_TIMESTAMP ELSE NULL END
+            WHERE id = ANY($2::int[])
+        """, completed, ids)
+    num_updated = result.split()[1]
+    return JSONResponse(content={"updated_count": int(num_updated)})
 
-async def get_table_columns(table_name: str, db: asyncpg.Connection) -> list[str]:
-    rows = await db.fetch("""
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_name = $1
-    """, table_name)
-    return [row['column_name'] for row in rows]
-
-async def check_by_id(item_id: int, table_name: str, db: asyncpg.Connection):
-    """
-    Checks whether item with such ID exists in a table
-    :return: True if item exists in table, False otherwise
-    """
-    if table_name not in VALID_TABLES:
-        raise HTTPException(status_code=400, detail="Invalid table name")
-
-    query = f"SELECT * FROM {table_name} WHERE id = $1"
-    item_exists = await db.fetchrow(query, item_id)
-    return bool(item_exists)
 
 
 

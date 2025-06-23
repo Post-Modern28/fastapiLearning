@@ -80,16 +80,20 @@ class UserBase(BaseModel):
     username: str
 
 
-class User(UserBase):
-    password: str
-
-    # age: int = Field(..., ge=0, lt=150, description="Возраст должен быть от 0 до 149 включительно")
-    # contact: Contact = None
-
-
 class UserInDB(UserBase):
     hashed_password: str
 
+class User(UserBase):
+    """Модель пользователя с базовыми полями"""
+    full_name: str | None = None
+    email: EmailStr | None = None
+    disabled: bool = False
+    roles: list[str]  # Список ролей пользователя
+
+class UserLogin(BaseModel):
+    """Модель для входа в систему"""
+    username: str
+    password: str
 
 class Feedback(BaseModel):
     name: str
