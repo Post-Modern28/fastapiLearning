@@ -11,11 +11,12 @@ from exceptions import *
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic
+from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
 from passlib.context import CryptContext
 
 from app.config import load_config
 from app.database.database import VALID_TABLES, get_db_connection
-from app.models.models import Todo, TodoReturn, User, ItemsResponse
+from app.models.models import ItemsResponse, Todo, TodoReturn, User
 
 # ===HELPERS===
 
@@ -68,6 +69,7 @@ DOCS_USER = os.getenv("DOCS_USER")
 DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 
 import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -79,8 +81,39 @@ app.add_exception_handler(CustomException, custom_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
 # @app.exception_handler(Exception)
+from pathlib import Path
+
+# Путь к корню проекта (один уровень выше текущего файла)
+ROOT_DIR = Path(__file__).resolve().parent.parent
+LOCALES_DIR = ROOT_DIR / "locales"
+
+# Создаем объект конфигурации для Babel:
+babel_configs = BabelConfigs(
+    ROOT_DIR=ROOT_DIR,
+    BABEL_DEFAULT_LOCALE="en",  # Язык по умолчанию
+    BABEL_TRANSLATION_DIRECTORY=str(LOCALES_DIR)  # Папка с переводами
+)
+
+# Инициализируем объект Babel с использованием конфигурации
+babel = Babel(configs=babel_configs)
+
+# Добавляем мидлварь, который будет устанавливать локаль для каждого запроса
+app.add_middleware(BabelMiddleware, babel_configs=babel_configs)
 
 
+# ===ROUTES===
+
+
+# Пример использования перевода в эндпоинте
+@app.get("/")
+async def root():
+    # Функция _() автоматически заменит "Hello World" на перевод
+    return {"message": _("Hello World")}
+
+
+@app.get("/sum/")
+def calculate_sum(a: int, b: int):
+    return {"result": a + b}
 
 @app.get(
     "/items/{item_id}/",
@@ -89,13 +122,19 @@ app.add_exception_handler(Exception, global_exception_handler)
     summary="Get Items by ID.",
     description="The endpoint returns item_id by ID. If the item_id is 42, an exception with the status code 404 is returned.",
     responses={
-        status.HTTP_200_OK: {'model': ItemsResponse},
-        status.HTTP_404_NOT_FOUND: {'model': CustomExceptionModel},  # вот тут применяем схемы ошибок пидантика
+        status.HTTP_200_OK: {"model": ItemsResponse},
+        status.HTTP_404_NOT_FOUND: {
+            "model": CustomExceptionModel
+        },  # вот тут применяем схемы ошибок пидантика
     },
 )
 async def read_item(item_id: int):
     if item_id == 42:
-        raise CustomException(detail="Item not found", status_code=404, message="You're trying to get an item that doesn't exist. Try entering a different item_id.")
+        raise CustomException(
+            detail="Item not found",
+            status_code=404,
+            message="You're trying to get an item that doesn't exist. Try entering a different item_id.",
+        )
     return ItemsResponse(item_id=item_id)
 
 
@@ -111,6 +150,24 @@ async def register_user(
         user.password,
     )
     return {"message": "User registered successfully"}
+
+
+@app.post("/get_user/{user_id}")
+async def register_user(
+    user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
+):  # заменить sqlite3 на aiosqlite для асинхронности
+    res = await db.fetchrow(
+        """
+        SELECT * 
+        FROM users 
+        WHERE id = $1
+    """,
+        user_id
+    )
+    if not res:
+        return JSONResponse(status_code=404, content={"message": "User not found"})
+    return JSONResponse(status_code=200, content=User(**res))
+
 
 
 @app.delete("/delete_user/{user_id}")

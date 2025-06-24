@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from fastapi import Request, HTTPException
-from fastapi.exceptions import RequestValidationError
 from typing import Union
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 
 class CustomException(HTTPException):
     def __init__(self, detail: str, status_code: int, message: str):
