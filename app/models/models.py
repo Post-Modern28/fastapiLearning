@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException
-from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 language_pattern = re.compile(
@@ -73,24 +72,28 @@ class Contact(BaseModel):
         return value
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 class UserBase(BaseModel):
     username: str
 
 
-class UserInDB(UserBase):
+class UserRegistration(UserBase):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: str
+
+
+class UserPass(UserBase):
+    id: int
     hashed_password: str
 
 
-class User(UserBase):
-    """Модель пользователя с базовыми полями"""
-
-    full_name: str | None = None
-    email: EmailStr | None = None
-    disabled: bool = False
-    roles: list[str]  # Список ролей пользователя
+class UserInfo(UserBase):
+    user_id: int
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 
 class UserLogin(BaseModel):
@@ -98,6 +101,15 @@ class UserLogin(BaseModel):
 
     username: str
     password: str
+
+
+class User(UserBase):
+    """Модель пользователя с базовыми полями"""
+
+    disabled: bool = False
+    roles: list[str]  # Список ролей пользователя
+
+
 
 
 class Feedback(BaseModel):

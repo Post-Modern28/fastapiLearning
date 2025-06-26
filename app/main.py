@@ -1,4 +1,5 @@
 import calendar
+import logging
 import os
 from datetime import datetime
 from typing import Optional
@@ -6,99 +7,49 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
 import uvicorn
+from asyncpg import UniqueViolationError
+
+from app.security.security import verify_password, create_jwt_token, get_current_user
 from exception_handlers import *
 from exceptions import *
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic
 from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
-from passlib.context import CryptContext
 
+from security.security import get_password_hash, pwd_context
+from helpers.db_helpers import get_table_columns, check_by_id
 from app.config import load_config
-from app.database.database import VALID_TABLES, get_db_connection
-from app.models.models import ItemsResponse, Todo, TodoReturn, User
+from app.database.database import get_db_connection
+from app.models.models import ItemsResponse, Todo, TodoReturn, User, UserInfo, UserRegistration, UserLogin
 
-# ===HELPERS===
-
-
-async def get_table_columns(table_name: str, db: asyncpg.Connection) -> list[str]:
-    rows = await db.fetch(
-        """
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_name = $1
-    """,
-        table_name,
-    )
-    return [row["column_name"] for row in rows]
-
-
-async def check_by_id(item_id: int, table_name: str, db: asyncpg.Connection):
-    """
-    Checks whether item with such ID exists in a table
-    :return: True if item exists in table, False otherwise
-    """
-    if table_name not in VALID_TABLES:
-        raise HTTPException(status_code=400, detail="Invalid table name")
-
-    query = f"SELECT * FROM {table_name} WHERE id = $1"
-    item_exists = await db.fetchrow(query, item_id)
-    return bool(item_exists)
-
-
-def parse_custom_datetime(value: Optional[str] = Query(None)) -> Optional[datetime]:
-    print("Value is", value)
-    if value is None:
-        return None
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%Y %H:%M:%S"):
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            continue
-    raise ValueError("Неверный формат даты")
-
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+# import enable_translation
 
 # === CONFIG & INIT ===
 
 config = load_config()
 security = HTTPBasic()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DOCS_USER = os.getenv("DOCS_USER")
 DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 
-import logging
-
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 
 # Настроим базовый логгер
 logging.basicConfig(level=logging.INFO)
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
-app.add_exception_handler(CustomException, custom_exception_handler)
-app.add_exception_handler(Exception, global_exception_handler)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# app.add_exception_handler(CustomException, custom_exception_handler)
+# app.add_exception_handler(Exception, global_exception_handler)
 
-# @app.exception_handler(Exception)
-from pathlib import Path
 
-# Путь к корню проекта (один уровень выше текущего файла)
-ROOT_DIR = Path(__file__).resolve().parent.parent
-LOCALES_DIR = ROOT_DIR / "locales"
 
-# Создаем объект конфигурации для Babel:
-babel_configs = BabelConfigs(
-    ROOT_DIR=ROOT_DIR,
-    BABEL_DEFAULT_LOCALE="en",  # Язык по умолчанию
-    BABEL_TRANSLATION_DIRECTORY=str(LOCALES_DIR)  # Папка с переводами
-)
-
-# Инициализируем объект Babel с использованием конфигурации
-babel = Babel(configs=babel_configs)
-
-# Добавляем мидлварь, который будет устанавливать локаль для каждого запроса
-app.add_middleware(BabelMiddleware, babel_configs=babel_configs)
 
 
 # ===ROUTES===
@@ -138,42 +89,109 @@ async def read_item(item_id: int):
     return ItemsResponse(item_id=item_id)
 
 
-@app.post("/register")
-async def register_user(
-    user: User, db: asyncpg.Connection = Depends(get_db_connection)
-):  # заменить sqlite3 на aiosqlite для асинхронности
-    await db.execute(
-        """
-        INSERT INTO users (username, password) VALUES($1, $2)
-    """,
-        user.username,
-        user.password,
-    )
-    return {"message": "User registered successfully"}
 
+@app.post("/register", response_model=UserInfo, status_code=201)
+@limiter.limit("5/minute")
+async def register_user(
+    request: Request,
+    user: UserRegistration, db: asyncpg.Connection = Depends(get_db_connection)
+):
+    try:
+        user_id = await db.fetchval("""
+            INSERT INTO users (username, hashed_password)
+            VALUES ($1, $2)
+            RETURNING id
+        """, user.username, get_password_hash(user.password))
+    except UniqueViolationError:
+        raise HTTPException(status_code=409, detail="User already exists.")
+    print(user_id)
+
+    await db.execute("""
+        INSERT INTO user_info (user_id, full_name, email)
+        VALUES ($1, $2, $3)
+    """, user_id, user.full_name, user.email)
+
+    return UserInfo(
+        user_id=user_id,
+        username=user.username,
+        full_name=user.full_name,
+        email=user.email
+    )
+
+
+
+@app.post("/log_in")
+@limiter.limit("5/minute")
+async def log_in(
+    request: Request,
+    user: UserLogin, db: asyncpg.Connection = Depends(get_db_connection)
+):
+    try:
+        real_pass = await db.fetchval("""
+        SELECT hashed_password 
+        FROM users
+        WHERE username = $1
+        """, user.username)
+        if not real_pass:
+            raise HTTPException(status_code=401, detail="User not found")
+    except:
+        raise HTTPException(status_code=500, detail="Server Error")
+
+    if not verify_password(user.password, real_pass):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    token = create_jwt_token({"sub": user.username})
+    response = JSONResponse(
+        content={"access_token": token, "token_type": "bearer",
+                 "message": f"Welcome, {user.username}"},
+    )
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return response
 
 @app.post("/get_user/{user_id}")
-async def register_user(
+async def get_user(
+    request: Request,
     user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
-):  # заменить sqlite3 на aiosqlite для асинхронности
+):
     res = await db.fetchrow(
         """
-        SELECT * 
-        FROM users 
-        WHERE id = $1
+        SELECT *, username 
+        FROM user_info
+        JOIN users ON users.id = user_info.user_id
+        WHERE user_id = $1
     """,
         user_id
     )
+    print(res)
     if not res:
         return JSONResponse(status_code=404, content={"message": "User not found"})
-    return JSONResponse(status_code=200, content=User(**res))
+    return UserInfo(**dict(res))
 
+@app.get("/protected")
+async def protected(
+    request: Request,
+    username: str = Depends(get_current_user)
+):
+    return {"message": f"Hello, {username}"}
+
+@app.post("/get_users")
+async def get_users(
+    db: asyncpg.Connection = Depends(get_db_connection)
+):
+    res = await db.fetch(
+    """
+        SELECT * 
+        FROM user_info 
+    """
+    )
+    if not res:
+        return JSONResponse(status_code=404, content={"message": "Users not found"})
+    return [UserInfo(**dict(usr)) for usr in res]
 
 
 @app.delete("/delete_user/{user_id}")
 async def delete_user(
     user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
-):  # заменить sqlite3 на aiosqlite для асинхронности
+):
     result = await db.execute(
         """
             DELETE FROM users WHERE id = $1

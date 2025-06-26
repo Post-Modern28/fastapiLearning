@@ -1,8 +1,9 @@
 import datetime
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 
 # Определяем схему аутентификации (OAuth2 с паролем)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -13,11 +14,12 @@ SECRET_KEY = "mysecretkey"  # Генерируем через `openssl rand -hex
 ALGORITHM = "HS256"  # Используем HMAC SHA-256 для подписи
 ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Время жизни токена (15 минут)
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_jwt_token(data: dict):
     """Создаём JWT-токен с указанием времени истечения"""
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + datetime.timedelta(
+    expire = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({"exp": expire})  # Добавляем время истечения в токен
@@ -34,8 +36,43 @@ def get_user_from_token(token: str = Depends(oauth2_scheme)):
             "sub"
         )  # JWT-токен содержит `sub` (subject) — имя пользователя
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Токен устарел")  # Токен просрочен
+        raise HTTPException(status_code=401, detail="Token expired")  # Токен просрочен
     except jwt.InvalidTokenError:
         raise HTTPException(
-            status_code=401, detail="Ошибка авторизации"
+            status_code=401, detail="Authorization error"
         )  # Невалидный токен
+
+
+def get_token_from_header_or_cookie(request: Request) -> str:
+    # 1. Пробуем из заголовка
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+
+    # 2. Пробуем из куки
+    token_cookie = request.cookies.get("access_token")
+    if token_cookie:
+        return token_cookie
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+    )
+
+async def get_current_user(token: str = Depends(get_token_from_header_or_cookie)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return username
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
