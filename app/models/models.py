@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from fastapi import HTTPException
@@ -103,11 +104,19 @@ class UserLogin(BaseModel):
     password: str
 
 
-class User(UserBase):
-    """Модель пользователя с базовыми полями"""
+class RoleEnum(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
+    MODERATOR = "moderator"
+    GUEST = "guest"
+    # Добавь другие роли по необходимости
 
+
+class UserRole(BaseModel):
+    """Модель пользователя с базовыми полями"""
+    user_id: int
     disabled: bool = False
-    roles: list[str]  # Список ролей пользователя
+    roles: list[RoleEnum]  # Список ролей пользователя
 
 
 
@@ -144,7 +153,7 @@ class Item(BaseModel):
     tax: float | None = None
 
 
-class ItemsResponse(BaseModel):
+class ItemsResponse(Item):
     item_id: int
 
 

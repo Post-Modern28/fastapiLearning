@@ -9,19 +9,20 @@ import asyncpg
 import uvicorn
 from asyncpg import UniqueViolationError
 
-from app.security.security import verify_password, create_jwt_token, get_current_user
+from app.security.rbac import PermissionChecker
+from app.security.security import verify_password, create_jwt_token, get_current_user, get_current_user_with_roles
 from exception_handlers import *
 from exceptions import *
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.security import HTTPBasic
-from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
+# from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
 
 from security.security import get_password_hash, pwd_context
 from helpers.db_helpers import get_table_columns, check_by_id
 from app.config import load_config
 from app.database.database import get_db_connection
-from app.models.models import ItemsResponse, Todo, TodoReturn, User, UserInfo, UserRegistration, UserLogin
+from app.models.models import ItemsResponse, Todo, TodoReturn, UserInfo, UserRegistration, UserLogin, UserRole, RoleEnum
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -59,7 +60,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.get("/")
 async def root():
     # Функция _() автоматически заменит "Hello World" на перевод
-    return {"message": _("Hello World")}
+    return RedirectResponse('/docs')
 
 
 @app.get("/sum/")
@@ -104,12 +105,17 @@ async def register_user(
         """, user.username, get_password_hash(user.password))
     except UniqueViolationError:
         raise HTTPException(status_code=409, detail="User already exists.")
-    print(user_id)
+
 
     await db.execute("""
         INSERT INTO user_info (user_id, full_name, email)
         VALUES ($1, $2, $3)
     """, user_id, user.full_name, user.email)
+
+    await db.execute("""
+            INSERT INTO user_roles (user_id, user_role)
+            VALUES ($1, $2)
+        """, user_id, RoleEnum.USER.value)
 
     return UserInfo(
         user_id=user_id,
@@ -127,11 +133,13 @@ async def log_in(
     user: UserLogin, db: asyncpg.Connection = Depends(get_db_connection)
 ):
     try:
-        real_pass = await db.fetchval("""
-        SELECT hashed_password 
+        row = await db.fetchrow("""
+        SELECT id, hashed_password 
         FROM users
         WHERE username = $1
         """, user.username)
+        real_pass = row['hashed_password']
+
         if not real_pass:
             raise HTTPException(status_code=401, detail="User not found")
     except:
@@ -139,7 +147,8 @@ async def log_in(
 
     if not verify_password(user.password, real_pass):
         raise HTTPException(status_code=401, detail="Incorrect password")
-    token = create_jwt_token({"sub": user.username})
+    user_id = row['id']
+    token = create_jwt_token({"sub": str(user_id), "username": user.username})
     response = JSONResponse(
         content={"access_token": token, "token_type": "bearer",
                  "message": f"Welcome, {user.username}"},
@@ -161,7 +170,6 @@ async def get_user(
     """,
         user_id
     )
-    print(res)
     if not res:
         return JSONResponse(status_code=404, content={"message": "User not found"})
     return UserInfo(**dict(res))
@@ -174,13 +182,17 @@ async def protected(
     return {"message": f"Hello, {username}"}
 
 @app.post("/get_users")
+@PermissionChecker([RoleEnum.ADMIN])
 async def get_users(
+    request: Request,
+    current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection)
 ):
     res = await db.fetch(
     """
         SELECT * 
         FROM user_info 
+        JOIN users ON users.id = user_info.user_id
     """
     )
     if not res:
@@ -205,7 +217,7 @@ async def delete_user(
     return {"message": "User and his todos are successfully deleted!"}
 
 
-@app.post("/create_note")
+@app.post("/create_note", status_code=201)
 async def create_note(note: Todo, db: asyncpg.Connection = Depends(get_db_connection)):
     if not await check_by_id(note.user_id, "users", db):
         return JSONResponse(status_code=404, content={"message": "User not found"})
@@ -220,7 +232,7 @@ async def create_note(note: Todo, db: asyncpg.Connection = Depends(get_db_connec
         note.description,
         note.user_id,
     )
-    return {"message": "Item added with custom ID", "item": TodoReturn(**row)}
+    return {"message": "Note created", "item": TodoReturn(**row)}
 
 
 @app.get("/get_notes", response_model=list[TodoReturn])
@@ -421,6 +433,12 @@ async def get_todos_analytics(
         ),
         "weekday_distribution": full_weekday_distribution,
     }
+
+@app.get("/admin")
+@PermissionChecker([RoleEnum.ADMIN])
+async def admin_info(current_user: UserRole = Depends(get_current_user_with_roles)):
+    return {"message": f"Hello, user {current_user.user_id}!"}
+
 
 
 # === RUN ===
