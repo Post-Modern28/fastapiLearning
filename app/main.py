@@ -9,29 +9,42 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import asyncpg
 import uvicorn
 from asyncpg import UniqueViolationError
-
-from app.security.rbac import PermissionChecker, OwnershipChecker
-from app.security.security import verify_password, create_jwt_token, get_current_user, get_current_user_with_roles
 from exception_handlers import *
 from exceptions import *
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, status, Response
-from fastapi.responses import JSONResponse, RedirectResponse, PlainTextResponse
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
+from helpers.db_helpers import check_by_id, get_table_columns
 from redis.asyncio import Redis
-from fastapi_limiter import FastAPILimiter
-# from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
 
+# from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
 from security.security import get_password_hash, pwd_context
-from helpers.db_helpers import get_table_columns, check_by_id
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
 from app.config import load_config
 from app.database.database import get_db_connection
-from app.models.models import ItemsResponse, Todo, TodoReturn, UserInfo, UserRegistration, UserLogin, UserRole, RoleEnum
+from app.models.models import (
+    ItemsResponse,
+    RoleEnum,
+    Todo,
+    TodoReturn,
+    UserInfo,
+    UserLogin,
+    UserRegistration,
+    UserRole,
+)
+from app.security.rbac import OwnershipChecker, PermissionChecker
+from app.security.security import (
+    create_jwt_token,
+    get_current_user,
+    get_current_user_with_roles,
+    verify_password,
+)
 
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 # import enable_translation
 
 # === CONFIG & INIT ===
@@ -47,6 +60,7 @@ DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 # Настроим базовый логгер
 logging.basicConfig(level=logging.INFO)
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     redis = Redis(host="localhost", port=6379, decode_responses=True)
@@ -61,14 +75,14 @@ app = FastAPI(lifespan=lifespan)
 # app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # app.add_exception_handler(CustomException, custom_exception_handler)
 # app.add_exception_handler(Exception, global_exception_handler)
-app.add_exception_handler(ExpiredTokenException, expired_token_handler)
+# app.add_exception_handler(ExpiredTokenException, expired_token_handler)
 
 
-
-
-async def role_based_rate_limit(request: Request,
-                                response: Response,
-                                current_user: UserRole = Depends(get_current_user_with_roles)) -> RateLimiter:
+async def role_based_rate_limit(
+    request: Request,
+    response: Response,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+) -> RateLimiter:
     if RoleEnum.ADMIN in current_user.roles:
         limiter = RateLimiter(times=10, minutes=1)
     elif RoleEnum.USER in current_user.roles:
@@ -81,16 +95,15 @@ async def role_based_rate_limit(request: Request,
 # ===ROUTES===
 
 
-# Пример использования перевода в эндпоинте
 @app.get("/")
 async def root():
-    # Функция _() автоматически заменит "Hello World" на перевод
-    return RedirectResponse('/docs')
+    return RedirectResponse("/docs")
 
 
 @app.get("/sum/")
 def calculate_sum(a: int, b: int):
     return {"result": a + b}
+
 
 @app.get(
     "/items/{item_id}/",
@@ -115,55 +128,70 @@ async def read_item(item_id: int):
     return ItemsResponse(item_id=item_id)
 
 
-
 @app.post("/register", response_model=UserInfo, status_code=201)
 # @limiter.limit("5/minute")
 async def register_user(
     request: Request,
-    user: UserRegistration, db: asyncpg.Connection = Depends(get_db_connection)
+    user: UserRegistration,
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
     try:
-        user_id = await db.fetchval("""
+        user_id = await db.fetchval(
+            """
             INSERT INTO users (username, hashed_password)
             VALUES ($1, $2)
             RETURNING id
-        """, user.username, get_password_hash(user.password))
+        """,
+            user.username,
+            get_password_hash(user.password),
+        )
     except UniqueViolationError:
         raise HTTPException(status_code=409, detail="User already exists.")
 
-
-    await db.execute("""
+    await db.execute(
+        """
         INSERT INTO user_info (user_id, full_name, email)
         VALUES ($1, $2, $3)
-    """, user_id, user.full_name, user.email)
+    """,
+        user_id,
+        user.full_name,
+        user.email,
+    )
 
-    await db.execute("""
+    await db.execute(
+        """
             INSERT INTO user_roles (user_id, user_role)
             VALUES ($1, $2)
-        """, user_id, RoleEnum.USER.value)
+        """,
+        user_id,
+        RoleEnum.USER.value,
+    )
 
     return UserInfo(
         user_id=user_id,
         username=user.username,
         full_name=user.full_name,
-        email=user.email
+        email=user.email,
     )
-
 
 
 @app.post("/log_in")
 # @limiter.limit("5/minute")
 async def log_in(
     request: Request,
-    user: UserLogin, db: asyncpg.Connection = Depends(get_db_connection)
+    user: UserLogin,
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
     try:
-        row = await db.fetchrow("""
+        row = await db.fetchrow(
+            """
         SELECT id, hashed_password 
         FROM users
         WHERE username = $1
-        """, user.username)
-        real_pass = row['hashed_password']
+        """,
+            user.username,
+        )
+        real_pass = row["hashed_password"]
 
         if not real_pass:
             raise HTTPException(status_code=401, detail="User not found")
@@ -172,19 +200,22 @@ async def log_in(
 
     if not verify_password(user.password, real_pass):
         raise HTTPException(status_code=401, detail="Incorrect password")
-    user_id = row['id']
+    user_id = row["id"]
     token = create_jwt_token({"sub": str(user_id), "username": user.username})
     response = JSONResponse(
-        content={"access_token": token, "token_type": "bearer",
-                 "message": f"Welcome, {user.username}"},
+        content={
+            "access_token": token,
+            "token_type": "bearer",
+            "message": f"Welcome, {user.username}",
+        },
     )
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
 
+
 @app.post("/get_user/{user_id}", dependencies=[Depends(role_based_rate_limit)])
 async def get_user(
-    request: Request,
-    user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
+    request: Request, user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
 ):
     res = await db.fetchrow(
         """
@@ -193,21 +224,22 @@ async def get_user(
         JOIN users ON users.id = user_info.user_id
         WHERE user_id = $1
     """,
-        user_id
+        user_id,
     )
     if not res:
         return JSONResponse(status_code=404, content={"message": "User not found"})
     return UserInfo(**dict(res))
+
 
 @app.post("/get_users", dependencies=[Depends(role_based_rate_limit)])
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.MODERATOR])
 async def get_users(
     request: Request,
     current_user: UserRole = Depends(get_current_user_with_roles),
-    db: asyncpg.Connection = Depends(get_db_connection)
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
     res = await db.fetch(
-    """
+        """
         SELECT * 
         FROM user_info 
         JOIN users ON users.id = user_info.user_id
@@ -218,12 +250,14 @@ async def get_users(
     return [UserInfo(**dict(usr)) for usr in res]
 
 
-@app.delete("/delete_user/{user_id}", )
+@app.delete(
+    "/delete_user/{user_id}",
+)
 @PermissionChecker([RoleEnum.ADMIN])
 async def delete_user(
     user_id: int,
     current_user: UserRole = Depends(get_current_user_with_roles),
-    db: asyncpg.Connection = Depends(get_db_connection)
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
     result = await db.execute(
         """
@@ -241,9 +275,10 @@ async def delete_user(
 @app.post("/create_note", status_code=201)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
 async def create_note(
-        note: Todo,
-        current_user: UserRole = Depends(get_current_user_with_roles),
-        db: asyncpg.Connection = Depends(get_db_connection)):
+    note: Todo,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
 
     row = await db.fetchrow(
         """
@@ -318,9 +353,10 @@ async def get_note(
 @app.get("/get_note/{note_id}", response_model=TodoReturn)
 @OwnershipChecker()
 async def get_note(
-        note_id: int,
-        current_user: UserRole = Depends(get_current_user_with_roles),
-        db: asyncpg.Connection = Depends(get_db_connection)):
+    note_id: int,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
     res = await db.fetchrow(
         """
         SELECT * FROM ThingsToDo
@@ -340,7 +376,7 @@ async def get_note(
 async def delete_note(
     note_id: int,
     current_user: UserRole = Depends(get_current_user_with_roles),
-    db: asyncpg.Connection = Depends(get_db_connection)
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
     result = await db.execute(
         """
@@ -361,7 +397,7 @@ async def update_note(
     note_id: int,
     note: Todo,
     current_user: UserRole = Depends(get_current_user_with_roles),
-    db: asyncpg.Connection = Depends(get_db_connection)
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
 
     result = await db.execute(
@@ -467,14 +503,19 @@ async def get_todos_analytics(
         "weekday_distribution": full_weekday_distribution,
     }
 
+
 @app.get("/admin")
 @PermissionChecker([RoleEnum.ADMIN])
 async def admin_info(current_user: UserRole = Depends(get_current_user_with_roles)):
     return {"message": f"Hello, user {current_user.user_id}!"}
 
+
 @app.get("/public", dependencies=[Depends(role_based_rate_limit)])
-async def public_endpoint(current_user: UserRole = Depends(get_current_user_with_roles)):
+async def public_endpoint(
+    current_user: UserRole = Depends(get_current_user_with_roles),
+):
     return {"message": f"Welcome, your roles: {current_user.roles}"}
+
 
 # === RUN ===
 

@@ -1,6 +1,8 @@
-from main import app
 from pathlib import Path
+
 from fastapi_babel import Babel, BabelConfigs, BabelMiddleware
+from main import app
+
 # Путь к корню проекта (один уровень выше текущего файла)
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LOCALES_DIR = ROOT_DIR / "locales"
@@ -9,7 +11,7 @@ LOCALES_DIR = ROOT_DIR / "locales"
 babel_configs = BabelConfigs(
     ROOT_DIR=ROOT_DIR,
     BABEL_DEFAULT_LOCALE="en",  # Язык по умолчанию
-    BABEL_TRANSLATION_DIRECTORY=str(LOCALES_DIR)  # Папка с переводами
+    BABEL_TRANSLATION_DIRECTORY=str(LOCALES_DIR),  # Папка с переводами
 )
 
 # Инициализируем объект Babel с использованием конфигурации

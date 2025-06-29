@@ -1,6 +1,5 @@
-from fastapi.exceptions import HTTPException
-
 import asyncpg
+from fastapi.exceptions import HTTPException
 
 from app.config import load_config
 
@@ -16,6 +15,7 @@ async def get_db_connection():
         yield conn
     finally:
         await conn.close()
+
 
 async def get_note_owner(note_id: int, db: asyncpg.Connection) -> int:
     row = await db.fetchrow(

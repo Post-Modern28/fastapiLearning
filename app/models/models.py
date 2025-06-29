@@ -73,9 +73,6 @@ class Contact(BaseModel):
         return value
 
 
-
-
-
 class UserBase(BaseModel):
     username: str
 
@@ -88,6 +85,7 @@ class UserRegistration(UserBase):
 
 class UserPass(UserBase):
     """Model for authentication"""
+
     id: int
     hashed_password: str
 
@@ -114,11 +112,10 @@ class RoleEnum(str, Enum):
 
 class UserRole(BaseModel):
     """User model with access roles"""
+
     user_id: int
     disabled: bool = False
     roles: list[RoleEnum]
-
-
 
 
 class Feedback(BaseModel):

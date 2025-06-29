@@ -7,5 +7,3 @@ from app.main import app  # Предполагается, что объект ap
 @pytest.fixture
 def client():
     return TestClient(app)
-
-

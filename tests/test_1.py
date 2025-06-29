@@ -23,7 +23,7 @@ def test_calculate_sum(client):
                 "loc": ["query", "b"],
                 "msg": "Field required",
                 "type": "missing",
-                "input": None
+                "input": None,
             }
         ]
     }

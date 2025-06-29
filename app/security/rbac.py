@@ -1,5 +1,4 @@
 import inspect
-
 from functools import wraps
 
 from fastapi import HTTPException, status
@@ -64,4 +63,5 @@ class OwnershipChecker:
                 raise HTTPException(status_code=403, detail="No access to resource")
 
             return await func(*args, **kwargs)
+
         return wrapper
