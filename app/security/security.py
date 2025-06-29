@@ -3,7 +3,7 @@ from typing import Optional
 
 import asyncpg
 import jwt
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 
@@ -17,7 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # В реальном проекте храните его в .env файле, а не в коде!
 SECRET_KEY = "mysecretkey"  # Генерируем через `openssl rand -hex 32`
 ALGORITHM = "HS256"  # Используем HMAC SHA-256 для подписи
-ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Время жизни токена (15 минут)
+ACCESS_TOKEN_EXPIRE_MINUTES = 10  # Время жизни токена (15 минут)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -76,6 +76,7 @@ async def get_current_user(token: str = Depends(get_token_from_header_or_cookie)
 
 async def get_current_user_with_roles(
         request: Request,
+        response: Response,
         db: asyncpg.Connection = Depends(get_db_connection)
 ) -> UserRole:
     token: Optional[str] = await get_token_from_header_or_cookie(request)
@@ -103,8 +104,10 @@ async def get_current_user_with_roles(
         return UserRole(user_id=row["user_id"], roles=roles)
 
     except jwt.ExpiredSignatureError:
+        response.delete_cookie("access_token")
         return UserRole(user_id=0, roles=[RoleEnum.GUEST])
     except jwt.DecodeError:
+        response.delete_cookie("access_token")
         return UserRole(user_id=0, roles=[RoleEnum.GUEST])
 
 

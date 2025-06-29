@@ -160,11 +160,11 @@ class ItemsResponse(Item):
 class Todo(BaseModel):
     title: str = ""
     description: str = ""
-    user_id: int
 
 
 class TodoReturn(Todo):
     id: int
+    user_id: int
     completed: bool = False
     created_at: datetime = datetime.now()
     completed_at: datetime | None = None

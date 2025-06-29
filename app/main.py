@@ -10,7 +10,7 @@ import asyncpg
 import uvicorn
 from asyncpg import UniqueViolationError
 
-from app.security.rbac import PermissionChecker
+from app.security.rbac import PermissionChecker, OwnershipChecker
 from app.security.security import verify_password, create_jwt_token, get_current_user, get_current_user_with_roles
 from exception_handlers import *
 from exceptions import *
@@ -61,7 +61,7 @@ app = FastAPI(lifespan=lifespan)
 # app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # app.add_exception_handler(CustomException, custom_exception_handler)
 # app.add_exception_handler(Exception, global_exception_handler)
-
+app.add_exception_handler(ExpiredTokenException, expired_token_handler)
 
 
 
@@ -199,15 +199,8 @@ async def get_user(
         return JSONResponse(status_code=404, content={"message": "User not found"})
     return UserInfo(**dict(res))
 
-@app.get("/protected")
-async def protected(
-    request: Request,
-    username: str = Depends(get_current_user)
-):
-    return {"message": f"Hello, {username}"}
-
-@app.post("/get_users")
-@PermissionChecker([RoleEnum.ADMIN])
+@app.post("/get_users", dependencies=[Depends(role_based_rate_limit)])
+@PermissionChecker([RoleEnum.ADMIN, RoleEnum.MODERATOR])
 async def get_users(
     request: Request,
     current_user: UserRole = Depends(get_current_user_with_roles),
@@ -225,9 +218,12 @@ async def get_users(
     return [UserInfo(**dict(usr)) for usr in res]
 
 
-@app.delete("/delete_user/{user_id}")
+@app.delete("/delete_user/{user_id}", )
+@PermissionChecker([RoleEnum.ADMIN])
 async def delete_user(
-    user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
+    user_id: int,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection)
 ):
     result = await db.execute(
         """
@@ -248,8 +244,6 @@ async def create_note(
         note: Todo,
         current_user: UserRole = Depends(get_current_user_with_roles),
         db: asyncpg.Connection = Depends(get_db_connection)):
-    if not await check_by_id(note.user_id, "users", db):
-        return JSONResponse(status_code=404, content={"message": "User not found"})
 
     row = await db.fetchrow(
         """
@@ -321,8 +315,12 @@ async def get_note(
     return [TodoReturn(**row) for row in res]
 
 
-@app.get("/get_note/{note_id}", response_model=Todo)
-async def get_note(note_id: int, db: asyncpg.Connection = Depends(get_db_connection)):
+@app.get("/get_note/{note_id}", response_model=TodoReturn)
+@OwnershipChecker()
+async def get_note(
+        note_id: int,
+        current_user: UserRole = Depends(get_current_user_with_roles),
+        db: asyncpg.Connection = Depends(get_db_connection)):
     res = await db.fetchrow(
         """
         SELECT * FROM ThingsToDo
@@ -331,13 +329,18 @@ async def get_note(note_id: int, db: asyncpg.Connection = Depends(get_db_connect
         note_id,
     )
     if res:
-        return Todo(**dict(res))
+        print(res)
+        return TodoReturn(**dict(res))
     return JSONResponse(status_code=404, content={"message": "Item not found"})
 
 
 @app.delete("/delete_note/{note_id}")
+@PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
+@OwnershipChecker()
 async def delete_note(
-    note_id: int, db: asyncpg.Connection = Depends(get_db_connection)
+    note_id: int,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection)
 ):
     result = await db.execute(
         """
@@ -353,23 +356,24 @@ async def delete_note(
 
 
 @app.put("/update_note/{note_id}")
+@OwnershipChecker()
 async def update_note(
-    note_id: int, note: Todo, db: asyncpg.Connection = Depends(get_db_connection)
+    note_id: int,
+    note: Todo,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection)
 ):
-    if not await check_by_id(note.user_id, "users", db):
-        return JSONResponse(status_code=404, content={"message": "User not found"})
 
     result = await db.execute(
         """
         UPDATE ThingsToDo
-        SET title = $1, description = $2, completed=$3, user_id=$5
+        SET title = $1, description = $2, completed=$3
         WHERE id = $4
     """,
         note.title,
         note.description,
         note.completed,
         note_id,
-        note.user_id,
     )
     if result == "UPDATE 1":
         return JSONResponse(
@@ -380,7 +384,7 @@ async def update_note(
 
 @app.patch("/complete_notes")
 async def complete_notes(
-    ids: list[int] = Query(...),
+    note_id: list[int] = Query(...),
     completed: bool = True,
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
@@ -392,7 +396,7 @@ async def complete_notes(
             WHERE id = ANY($2::int[])
         """,
         completed,
-        ids,
+        note_id,
     )
     num_updated = result.split()[1]
     return JSONResponse(content={"updated_count": int(num_updated)})

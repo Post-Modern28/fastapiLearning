@@ -1,8 +1,11 @@
+import inspect
+
 from functools import wraps
 
 from fastapi import HTTPException, status
 
-from app.models.models import RoleEnum
+from app.database.database import get_note_owner
+from app.models.models import RoleEnum, UserRole
 
 
 class PermissionChecker:
@@ -31,4 +34,34 @@ class PermissionChecker:
                 )
             return await func(*args, **kwargs)
 
+        return wrapper
+
+
+class OwnershipChecker:
+    def __call__(self, func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            sig = inspect.signature(func)
+            bound = sig.bind_partial(*args, **kwargs)
+            bound.apply_defaults()
+            arguments = bound.arguments
+
+            user: UserRole = arguments.get("current_user")
+            note_id = arguments.get("note_id")
+            db = arguments.get("db")
+
+            if not user:
+                raise HTTPException(status_code=403, detail="Authentication Required")
+
+            if RoleEnum.ADMIN in user.roles:
+                return await func(*args, **kwargs)
+
+            # if isinstance(note_id, int):
+            #     note_ids = [note_id]
+
+            owner = await get_note_owner(note_id, db)
+            if owner != user.user_id:
+                raise HTTPException(status_code=403, detail="No access to resource")
+
+            return await func(*args, **kwargs)
         return wrapper
