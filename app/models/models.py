@@ -87,6 +87,7 @@ class UserRegistration(UserBase):
 
 
 class UserPass(UserBase):
+    """Model for authentication"""
     id: int
     hashed_password: str
 
@@ -98,7 +99,7 @@ class UserInfo(UserBase):
 
 
 class UserLogin(BaseModel):
-    """Модель для входа в систему"""
+    """Model for logging in the system"""
 
     username: str
     password: str
@@ -109,14 +110,13 @@ class RoleEnum(str, Enum):
     ADMIN = "admin"
     MODERATOR = "moderator"
     GUEST = "guest"
-    # Добавь другие роли по необходимости
 
 
 class UserRole(BaseModel):
-    """Модель пользователя с базовыми полями"""
+    """User model with access roles"""
     user_id: int
     disabled: bool = False
-    roles: list[RoleEnum]  # Список ролей пользователя
+    roles: list[RoleEnum]
 
 
 

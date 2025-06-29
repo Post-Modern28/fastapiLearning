@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 import asyncpg
 import jwt
@@ -38,30 +39,27 @@ async def get_user_from_token(token: str = Depends(oauth2_scheme)):
         )  # Декодируем токен
         return payload.get(
             "sub"
-        )  # JWT-токен содержит `sub` (subject) — имя пользователя
+        )
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")  # Токен просрочен
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=401, detail="Authorization error"
-        )  # Невалидный токен
+        )
 
 
-async def get_token_from_header_or_cookie(request: Request) -> str:
-    # 1. Пробуем из заголовка
+async def get_token_from_header_or_cookie(request: Request) -> Optional[str]:
+    # 1. Try to get token from header
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         return auth_header[len("Bearer "):]
 
-    # 2. Пробуем из куки
+    # 2. Try to get token from cookie
     token_cookie = request.cookies.get("access_token")
     if token_cookie:
         return token_cookie
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-    )
+    return None
 
 async def get_current_user(token: str = Depends(get_token_from_header_or_cookie)):
     try:
@@ -75,10 +73,16 @@ async def get_current_user(token: str = Depends(get_token_from_header_or_cookie)
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
 async def get_current_user_with_roles(
-    token: str = Depends(get_token_from_header_or_cookie),
-    db: asyncpg.Connection = Depends(get_db_connection),
+        request: Request,
+        db: asyncpg.Connection = Depends(get_db_connection)
 ) -> UserRole:
+    token: Optional[str] = await get_token_from_header_or_cookie(request)
+
+    if token is None:
+        return UserRole(user_id=0, roles=[RoleEnum.GUEST])
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
@@ -93,11 +97,15 @@ async def get_current_user_with_roles(
         """, int(user_id))
 
         if row is None:
-            raise HTTPException(status_code=403, detail="No roles assigned")
+            return UserRole(user_id=user_id, roles=[RoleEnum.GUEST])
+
         roles = [RoleEnum(role) for role in row["roles"]]
         return UserRole(user_id=row["user_id"], roles=roles)
+
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Session expired")
+        return UserRole(user_id=0, roles=[RoleEnum.GUEST])
+    except jwt.DecodeError:
+        return UserRole(user_id=0, roles=[RoleEnum.GUEST])
 
 
 def get_password_hash(password):

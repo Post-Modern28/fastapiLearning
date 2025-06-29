@@ -1,6 +1,7 @@
 import calendar
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -13,9 +14,13 @@ from app.security.rbac import PermissionChecker
 from app.security.security import verify_password, create_jwt_token, get_current_user, get_current_user_with_roles
 from exception_handlers import *
 from exceptions import *
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status, Response
 from fastapi.responses import JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.security import HTTPBasic
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+from redis.asyncio import Redis
+from fastapi_limiter import FastAPILimiter
 # from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
 
 from security.security import get_password_hash, pwd_context
@@ -42,15 +47,35 @@ DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 # Настроим базовый логгер
 logging.basicConfig(level=logging.INFO)
 
-limiter = Limiter(key_func=get_remote_address)
-app = FastAPI()
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    redis = Redis(host="localhost", port=6379, decode_responses=True)
+    await FastAPILimiter.init(redis)
+    yield
+    await FastAPILimiter.close()
+
+
+# limiter = Limiter(key_func=get_remote_address)
+app = FastAPI(lifespan=lifespan)
+# app.state.limiter = limiter
+# app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # app.add_exception_handler(CustomException, custom_exception_handler)
 # app.add_exception_handler(Exception, global_exception_handler)
 
 
 
+
+
+async def role_based_rate_limit(request: Request,
+                                response: Response,
+                                current_user: UserRole = Depends(get_current_user_with_roles)) -> RateLimiter:
+    if RoleEnum.ADMIN in current_user.roles:
+        limiter = RateLimiter(times=10, minutes=1)
+    elif RoleEnum.USER in current_user.roles:
+        limiter = RateLimiter(times=5, minutes=1)
+    else:
+        limiter = RateLimiter(times=1, minutes=1)
+    await limiter(request=request, response=response)
 
 
 # ===ROUTES===
@@ -92,7 +117,7 @@ async def read_item(item_id: int):
 
 
 @app.post("/register", response_model=UserInfo, status_code=201)
-@limiter.limit("5/minute")
+# @limiter.limit("5/minute")
 async def register_user(
     request: Request,
     user: UserRegistration, db: asyncpg.Connection = Depends(get_db_connection)
@@ -127,7 +152,7 @@ async def register_user(
 
 
 @app.post("/log_in")
-@limiter.limit("5/minute")
+# @limiter.limit("5/minute")
 async def log_in(
     request: Request,
     user: UserLogin, db: asyncpg.Connection = Depends(get_db_connection)
@@ -156,7 +181,7 @@ async def log_in(
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
 
-@app.post("/get_user/{user_id}")
+@app.post("/get_user/{user_id}", dependencies=[Depends(role_based_rate_limit)])
 async def get_user(
     request: Request,
     user_id: int, db: asyncpg.Connection = Depends(get_db_connection)
@@ -218,7 +243,11 @@ async def delete_user(
 
 
 @app.post("/create_note", status_code=201)
-async def create_note(note: Todo, db: asyncpg.Connection = Depends(get_db_connection)):
+@PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
+async def create_note(
+        note: Todo,
+        current_user: UserRole = Depends(get_current_user_with_roles),
+        db: asyncpg.Connection = Depends(get_db_connection)):
     if not await check_by_id(note.user_id, "users", db):
         return JSONResponse(status_code=404, content={"message": "User not found"})
 
@@ -230,7 +259,7 @@ async def create_note(note: Todo, db: asyncpg.Connection = Depends(get_db_connec
     """,
         note.title,
         note.description,
-        note.user_id,
+        current_user.user_id,
     )
     return {"message": "Note created", "item": TodoReturn(**row)}
 
@@ -439,7 +468,9 @@ async def get_todos_analytics(
 async def admin_info(current_user: UserRole = Depends(get_current_user_with_roles)):
     return {"message": f"Hello, user {current_user.user_id}!"}
 
-
+@app.get("/public", dependencies=[Depends(role_based_rate_limit)])
+async def public_endpoint(current_user: UserRole = Depends(get_current_user_with_roles)):
+    return {"message": f"Welcome, your roles: {current_user.roles}"}
 
 # === RUN ===
 
