@@ -7,17 +7,16 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 
-from app.database.database import get_db_connection
+from app.database.database import config, get_db_connection
 from app.models.models import RoleEnum, UserRole
 
 # Определяем схему аутентификации (OAuth2 с паролем)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# Секретный ключ для подписи JWT
-# В реальном проекте храните его в .env файле, а не в коде!
-SECRET_KEY = "mysecretkey"  # Генерируем через `openssl rand -hex 32`
+
+SECRET_KEY = config.secret_key  # Генерируем через `openssl rand -hex 32`
 ALGORITHM = "HS256"  # Используем HMAC SHA-256 для подписи
-ACCESS_TOKEN_EXPIRE_MINUTES = 10  # Время жизни токена (15 минут)
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Время жизни токена (15 минут)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
