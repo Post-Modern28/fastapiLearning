@@ -118,42 +118,6 @@ class UserRole(BaseModel):
     roles: list[RoleEnum]
 
 
-class Feedback(BaseModel):
-    name: str
-    message: str
-    contact: Contact
-
-    @field_validator("name")
-    def check_name_len(cls, length):
-        if 2 <= len(length) <= 50:
-            return length
-        raise ValueError("Имя должно содержать от 2 до 50 символов")
-
-    @field_validator("message")
-    def check_message_len_and_words(cls, message):
-        if not (10 <= len(message) <= 500):
-            raise ValueError("Сообщение должно содержать от 10 до 500 символов")
-
-        forbidden_words = ["редиск", "бяк", "козявк"]
-        for word in message.split():
-            for forbidden in forbidden_words:
-                if word.startswith(forbidden):
-                    raise ValueError("Использование недопустимых слов")
-
-        return message
-
-
-class Item(BaseModel):
-    name: str
-    description: str | None = None
-    price: float
-    tax: float | None = None
-
-
-class ItemsResponse(Item):
-    item_id: int
-
-
 class Todo(BaseModel):
     title: str = ""
     description: str = ""
