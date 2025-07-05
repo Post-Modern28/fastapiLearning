@@ -5,7 +5,8 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi_limiter.depends import RateLimiter
 
 from app.api.schemas.models import RoleEnum, UserRole
-from app.database.database import get_note_owner
+from app.database.repositories.note_repository import NoteRepository
+from app.database.repositories.user_repository import UserRepository
 from app.security.security import get_current_user_with_roles
 
 
@@ -66,7 +67,6 @@ class OwnershipChecker:
             user: UserRole = arguments.get("current_user")
             note_id = arguments.get("note_id")
             db = arguments.get("db")
-
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -76,10 +76,13 @@ class OwnershipChecker:
             if RoleEnum.ADMIN in user.roles:
                 return await func(*args, **kwargs)
 
-            # if isinstance(note_id, int):
-            #     note_ids = [note_id]
-
-            owner = await get_note_owner(note_id, db)
+            note_repo = NoteRepository(db)
+            owner = await note_repo.get_note_owner(note_id)
+            if owner == -1:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Note not found",
+                )
             if owner != user.user_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

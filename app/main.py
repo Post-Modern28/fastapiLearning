@@ -2,34 +2,25 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-import asyncpg
 import uvicorn
-from asyncpg import UniqueViolationError
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import Depends, FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic
 from fastapi_limiter import FastAPILimiter
 from redis.asyncio import Redis
 
 # from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
-from security.security import get_password_hash
 
 from app.api.routes.notes import todo_router
 from app.api.routes.users import users_router
 from app.api.schemas.models import (
     RoleEnum,
-    UserInfo,
-    UserLogin,
-    UserRegistration,
     UserRole,
 )
-from app.config import load_config
-from app.database.database import get_db_connection
+from app.core.config import load_config
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 from app.security.security import (
-    create_jwt_token,
     get_current_user_with_roles,
-    verify_password,
 )
 
 # import enable_translation

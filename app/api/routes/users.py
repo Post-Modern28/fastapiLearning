@@ -1,17 +1,8 @@
-import logging
-import os
-from contextlib import asynccontextmanager
-
 import asyncpg
-import uvicorn
 from asyncpg import UniqueViolationError
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.security import HTTPBasic
-from fastapi_limiter import FastAPILimiter
-from redis.asyncio import Redis
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 
-from app.api.routes.notes import todo_router
 from app.api.schemas.models import (
     RoleEnum,
     UserInfo,
@@ -19,7 +10,6 @@ from app.api.schemas.models import (
     UserRegistration,
     UserRole,
 )
-from app.config import load_config
 from app.database.database import get_db_connection
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 

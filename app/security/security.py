@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 
 from app.api.schemas.models import RoleEnum, UserRole
 from app.database.database import config, get_db_connection
+from app.database.repositories.user_repository import UserRepository
 
 # Определяем схему аутентификации (OAuth2 с паролем)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -87,21 +88,12 @@ async def get_current_user_with_roles(
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        row = await db.fetchrow(
-            """
-            SELECT user_id, array_agg(user_role) AS roles
-            FROM user_roles
-            WHERE disabled = false AND user_id = $1
-            GROUP BY user_id
-        """,
-            int(user_id),
-        )
+        user_repo = UserRepository(db)
+        user_roles = await user_repo.get_user_roles_by_id(int(user_id))
 
-        if row is None:
+        if user_roles is None:
             return UserRole(user_id=user_id, roles=[RoleEnum.GUEST])
-
-        roles = [RoleEnum(role) for role in row["roles"]]
-        return UserRole(user_id=row["user_id"], roles=roles)
+        return user_roles
 
     except jwt.ExpiredSignatureError:
         response.delete_cookie("access_token")
