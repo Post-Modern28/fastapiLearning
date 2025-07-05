@@ -75,3 +75,12 @@ class NoteRepository:
             timezone
         )
         return total, status_counts, avg_time, weekday_raw
+
+    async def get_note_owner(self, note_id: int) -> int:
+        row = await self.db.fetchrow(
+            "SELECT user_id FROM ThingsToDo WHERE id = $1",
+            note_id,
+        )
+        if row is None:
+            return -1
+        return row["user_id"]
