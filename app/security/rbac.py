@@ -1,10 +1,26 @@
 import inspect
 from functools import wraps
 
-from fastapi import HTTPException, status
+from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi_limiter.depends import RateLimiter
 
+from app.api.schemas.models import RoleEnum, UserRole
 from app.database.database import get_note_owner
-from app.models.models import RoleEnum, UserRole
+from app.security.security import get_current_user_with_roles
+
+
+async def role_based_rate_limit(
+    request: Request,
+    response: Response,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+) -> RateLimiter:
+    if RoleEnum.ADMIN in current_user.roles:
+        limiter = RateLimiter(times=10, minutes=1)
+    elif RoleEnum.USER in current_user.roles:
+        limiter = RateLimiter(times=5, minutes=1)
+    else:
+        limiter = RateLimiter(times=1, minutes=1)
+    await limiter(request=request, response=response)
 
 
 class PermissionChecker:

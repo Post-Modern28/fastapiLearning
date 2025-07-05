@@ -1,7 +1,7 @@
 from exceptions import *
 from fastapi.encoders import jsonable_encoder
 
-from app.models.models import CustomExceptionModel
+from app.api.schemas.models import CustomExceptionModel
 
 
 async def custom_exception_handler(

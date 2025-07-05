@@ -15,6 +15,7 @@ class DatabaseConfig:
     database_url: str
     sqlalchemy_url: str
 
+
 @dataclass
 class Config:
     db: DatabaseConfig
@@ -28,8 +29,10 @@ def load_config(path: str = None) -> Config:
     env.read_env(path)  # Загружаем переменные окружения из файла .env
 
     return Config(
-        db=DatabaseConfig(database_url=env("DATABASE_URL"),
-                          sqlalchemy_url=env("ASYNC_SQLALCHEMY_DATABASE_URL")),
+        db=DatabaseConfig(
+            database_url=env("DATABASE_URL"),
+            sqlalchemy_url=env("ASYNC_SQLALCHEMY_DATABASE_URL"),
+        ),
         secret_key=env("SECRET_KEY"),
         debug=env.bool("DEBUG", default=False),
         mode=Mode(env("MODE")),

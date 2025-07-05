@@ -3,12 +3,12 @@ from typing import Optional
 
 import asyncpg
 import jwt
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 
+from app.api.schemas.models import RoleEnum, UserRole
 from app.database.database import config, get_db_connection
-from app.models.models import RoleEnum, UserRole
 
 # Определяем схему аутентификации (OAuth2 с паролем)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
