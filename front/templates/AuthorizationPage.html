@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authorization</title>
+    {% include "headlinks.html" with context %}
+
+</head>
+<body>
+    <header>
+        <div class="shapka">
+            <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
+            <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
+        </div>
+    </header>
+    <form action="/" class="authorizationWindow" method="post">
+        <div class="innerAuthWind">
+            <img class = 'authLogo' src="{{ url_for('static', path='img/IUNewLogo.png') }}">
+            <div class="vvod">
+                <input name="email" class="authorizationBar" placeholder="Enter the email">
+                <input name="password" style="margin-top: 10px" type="password" class="authorizationBar" placeholder="Enter the password">
+            </div>
+            <div>
+                <button type="submit" class="logInButton">Log in</button>
+
+            </div>
+
+        </div>
+
+
+    </form>
+    {% if wrongdata %}
+        <p class="authorizationError">{{ error_message }}</p>
+    {% endif %}
+
+</body>
+</html>
