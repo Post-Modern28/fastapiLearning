@@ -19,6 +19,7 @@ from app.api.schemas.models import (
     RoleEnum,
     UserRole,
 )
+from app.common.templates import templates
 from app.core.config import load_config
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 from app.security.security import (
@@ -56,7 +57,6 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 app.include_router(users_router)
 app.include_router(todo_router)
@@ -77,6 +77,19 @@ async def get_login_page(request: Request):
             "request": request,
             "wrongdata": False,
             "error_message": "",
+        },
+    )
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(
+    request: Request, current_user: UserRole = Depends(get_current_user_with_roles)
+):
+    return templates.TemplateResponse(
+        "Dashboard.html",
+        {
+            "request": request,
+            "user": current_user,
         },
     )
 

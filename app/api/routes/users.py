@@ -1,8 +1,8 @@
 # app/api/routes/users.py
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.api.schemas.models import (
     RoleEnum,
@@ -11,6 +11,7 @@ from app.api.schemas.models import (
     UserRegistration,
     UserRole,
 )
+from app.common.templates import templates
 from app.database.database import get_db_connection
 from app.database.repositories.user_repository import UserRepository
 from app.security.rbac import PermissionChecker, role_based_rate_limit
@@ -24,12 +25,29 @@ from app.security.security import (
 users_router = APIRouter(prefix="/users", tags=["Users"])
 
 
+@users_router.get("/register", response_class=HTMLResponse)
+async def get_registration_page(request: Request):
+    return templates.TemplateResponse(
+        "RegistrationPage.html",
+        {
+            "request": request,
+            "error_message": "",
+        },
+    )
+
+
 @users_router.post("/register", response_model=UserInfo, status_code=201)
 async def register_user(
     request: Request,
-    user: UserRegistration,
+    username: str = Form(...),
+    password: str = Form(...),
+    full_name: str = Form(...),
+    email: str = Form(...),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
+    user = UserRegistration(
+        username=username, password=password, full_name=full_name, email=email
+    )
     user_repo = UserRepository(db)
     user_id = await user_repo.create_user(
         user.username, get_password_hash(user.password)
@@ -39,42 +57,41 @@ async def register_user(
 
     await user_repo.create_user_info(user_id, user.full_name, user.email)
     await user_repo.assign_default_role(user_id)
+    response = RedirectResponse(url="/", status_code=302)
 
-    return UserInfo(
-        user_id=user_id,
-        username=user.username,
-        full_name=user.full_name,
-        email=user.email,
-    )
+    return response
 
 
 @users_router.post("/log_in")
 async def log_in(
     request: Request,
-    user: UserLogin,
+    username: str = Form(...),
+    password: str = Form(...),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     user_repo = UserRepository(db)
 
-    try:
-        row = await user_repo.get_user_by_username(user.username)
-        if not row or not row["hashed_password"]:
-            raise HTTPException(status_code=401, detail="User not found")
-    except Exception:
-        raise HTTPException(status_code=500, detail="Server Error")
+    row = await user_repo.get_user_by_username(username)
 
-    if not verify_password(user.password, row["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+    if (
+        not row
+        or not row["hashed_password"]
+        or not verify_password(password, row["hashed_password"])
+    ):
+        return templates.TemplateResponse(
+            "AuthorizationPage.html",
+            {
+                "request": request,
+                "wrongdata": True,
+                "error_message": "Incorrect username or password",
+            },
+            status_code=401,
+        )
 
     user_id = row["id"]
-    token = create_jwt_token({"sub": str(user_id), "username": user.username})
-    response = JSONResponse(
-        content={
-            "access_token": token,
-            "token_type": "bearer",
-            "message": f"Welcome, {user.username}",
-        },
-    )
+    token = create_jwt_token({"sub": str(user_id), "username": username})
+
+    response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
 
@@ -119,3 +136,17 @@ async def delete_user(
         return JSONResponse(status_code=404, content={"message": "User not found"})
 
     return {"message": "User and his todos are successfully deleted!"}
+
+
+@users_router.get("/profile", response_class=HTMLResponse)
+async def get_profile(
+    request: Request,
+    current_user=Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    user_repo = UserRepository(db)
+    user_info = await user_repo.get_user_full_info(current_user.user_id)
+    return templates.TemplateResponse(
+        "Profile.html",
+        {"request": request, "user": user_info, "updated": False, "error": ""},
+    )

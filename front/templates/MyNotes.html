@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Notes</title>
+    {% include "headlinks.html" with context %}
+</head>
+<body>
+
+    <header>
+        <div class="shapka">
+            <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
+            <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
+        </div>
+    </header>
+    {% include "navigationBar.html" %}
+
+    <div class="hint">
+        Here are your notes, {{ user.username }}
+    </div>
+
+    <div class="schedule">
+        {% if todos %}
+            <table class="table table-dark">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for todo in todos %}
+                    <tr>
+                        <td>{{ todo.title }}</td>
+                        <td>{{ todo.description }}</td>
+                        <td>{{ todo.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                        <td>
+                            {% if todo.completed %}
+                                ✅ Done
+                            {% else %}
+                                ⏳ In progress
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="text-align:center; font-size:16px;">You don’t have any notes yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

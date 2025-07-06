@@ -1,10 +1,9 @@
 ﻿<div class="mainMenu">
   <div class="navigationButtons">
-    <a class="menuButton" href="/input/"><div class="navB {% if request.path == '/input/' %} openedPage {% endif %}">Load <br> Input</div></a>
-    <a class="menuButton" href="/input-editing/"><div class="navB {% if request.path == '/input-editing/' %} openedPage {% endif %}">Edit <br> Input</div></a>
-    <a class="menuButton" href="/generation/"><div class="navB {% if request.path == '/generation/' %}openedPage{% endif %}">Generate <br> Schedule</div></a>
-    <a class="menuButton" href="/schedule-editing/"><div class="navB {% if request.path == '/schedule-editing/' %}openedPage{% endif %}">Edit <br> Schedule</div></a>
-    <a class="menuButton" href="/schedule-uploading/"><div class="navB {% if request.path == '/schedule-uploading/' %}openedPage{% endif %}">Upload <br> Schedule</div></a>
+    <a class="menuButton" href="/dashboard"><div class="navB {% if request.path == '/dashboard' %} openedPage {% endif %}"> Dashboard </div></a>
+    <a class="menuButton" href="/notes/my_notes"><div class="navB {% if request.path == '/notes/my_notes' %} openedPage {% endif %}">My notes</div></a>
+    <a class="menuButton" href="/users/profile"><div class="navB {% if request.path == '/users/profile' %}openedPage{% endif %}">Profile</div></a>
+
   </div>
   <button style="margin-right: 5px" class="exitButton"><a style="text-decoration: none; color: black" href="/">Log out</a></button>
 </div>

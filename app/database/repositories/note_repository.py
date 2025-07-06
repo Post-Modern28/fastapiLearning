@@ -20,6 +20,16 @@ class NoteRepository:
             user_id,
         )
 
+    async def get_user_notes(self, user_id: int):
+        return await self.db.fetch(
+            """
+            SELECT * 
+            FROM ThingsToDo
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
+
     async def get_filtered_notes(self, query: str, params: list):
         return await self.db.fetch(query, *params)
 

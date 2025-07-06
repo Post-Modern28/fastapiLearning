@@ -2,35 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Authorization</title>
+    <title>Register</title>
     {% include "headlinks.html" with context %}
 </head>
 <body>
+    <!-- Шапка -->
     <header>
         <div class="shapka">
             <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
             <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
         </div>
     </header>
-
-    <form action="/users/log_in" class="authorizationWindow" method="post">
+    <form action="/users/register" class="authorizationWindow" method="post">
         <div class="innerAuthWind">
             <img class="authLogo" src="{{ url_for('static', path='img/IUNewLogo.png') }}">
             <div class="vvod">
-                <input name="username" class="authorizationBar" placeholder="Enter the username">
-                <input name="password" style="margin-top: 10px" type="password" class="authorizationBar" placeholder="Enter the password">
+                <input name="username" class="authorizationBar" placeholder="Username">
+                <input name="full_name" class="authorizationBar" placeholder="Full Name" style="margin-top: 10px;">
+                <input name="email" class="authorizationBar" placeholder="Email" style="margin-top: 10px;">
+                <input name="password" type="password" class="authorizationBar" placeholder="Password" style="margin-top: 10px;">
             </div>
-
-            <div style="display: flex; justify-content: space-between; width: 220px; margin-top: 10px;">
-                <button type="submit" class="logInButton">Log in</button>
-                <a href="/users/register">
-                    <button type="button" class="logInButton" style="background: #C0BFBF; color: black;">Register</button>
-                </a>
+            <div>
+                <button type="submit" class="logInButton">Register</button>
             </div>
         </div>
     </form>
-
-    {% if wrongdata %}
+    {% if error_message %}
         <p class="authorizationError">{{ error_message }}</p>
     {% endif %}
 </body>

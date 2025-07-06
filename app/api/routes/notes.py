@@ -4,10 +4,11 @@ from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.api.schemas.models import RoleEnum, Todo, TodoReturn, UserRole
+from app.common.templates import templates
 from app.database.database import get_db_connection
 from app.database.repositories.note_repository import NoteRepository
 from app.helpers.db_helpers import check_by_id, get_table_columns
@@ -27,6 +28,20 @@ async def create_note(
     repo = NoteRepository(db)
     row = await repo.create_note(note.title, note.description, current_user.user_id)
     return {"message": "Note created", "item": TodoReturn(**row)}
+
+
+@todo_router.get("/my_notes", status_code=201)
+@PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
+async def get_user_notes(
+    request: Request,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    repo = NoteRepository(db)
+    rows = await repo.get_user_notes(current_user.user_id)
+    return templates.TemplateResponse(
+        "MyNotes.html", {"request": request, "user": current_user, "todos": rows}
+    )
 
 
 @todo_router.get("/get_notes", response_model=list[TodoReturn])
