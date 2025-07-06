@@ -18,4 +18,3 @@ from app.security.security import (
 )
 
 todo_router = APIRouter(prefix="/currency", tags=["Currency"])
-

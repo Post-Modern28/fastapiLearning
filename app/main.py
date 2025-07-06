@@ -1,18 +1,18 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
-from fastapi import Depends, FastAPI, Request, Form
-from fastapi.security import HTTPBasic
-from fastapi_limiter import FastAPILimiter
-from redis.asyncio import Redis
+from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi_limiter import FastAPILimiter
+from redis.asyncio import Redis
 
 # from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
-
 from app.api.routes.notes import todo_router
 from app.api.routes.users import users_router
 from app.api.schemas.models import (
@@ -25,7 +25,6 @@ from app.security.security import (
     get_current_user_with_roles,
 )
 
-from pathlib import Path
 # import enable_translation
 
 # === CONFIG & INIT ===
@@ -38,7 +37,6 @@ DOCS_USER = os.getenv("DOCS_USER")
 DOCS_PASSWORD = os.getenv("DOCS_PASSWORD")
 
 
-# Настроим базовый логгер
 logging.basicConfig(level=logging.INFO)
 
 
@@ -56,13 +54,10 @@ TEMPLATES_DIR = FRONTEND_DIR / "templates"
 
 app = FastAPI(lifespan=lifespan)
 
-# Сначала монтируем static
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
-# Затем подключаем templates
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Потом маршруты
 app.include_router(users_router)
 app.include_router(todo_router)
 
@@ -73,20 +68,17 @@ app.include_router(todo_router)
 
 # ===ROUTES===
 
+
 @app.get("/", response_class=HTMLResponse)
 async def get_login_page(request: Request):
-    return templates.TemplateResponse("AuthorizationPage.html", {
-        "request": request,  # <-- обязательно!
-        "wrongdata": False,
-        "error_message": ""
-    })
-
-
-
-
-# @app.get("/")
-# async def root():
-#     return RedirectResponse("/docs")
+    return templates.TemplateResponse(
+        "AuthorizationPage.html",
+        {
+            "request": request,
+            "wrongdata": False,
+            "error_message": "",
+        },
+    )
 
 
 @app.get("/sum/")

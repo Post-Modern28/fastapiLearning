@@ -1,8 +1,8 @@
 # app/api/routes/users.py
 
+import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-import asyncpg
 
 from app.api.schemas.models import (
     RoleEnum,
@@ -31,7 +31,9 @@ async def register_user(
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     user_repo = UserRepository(db)
-    user_id = await user_repo.create_user(user.username, get_password_hash(user.password))
+    user_id = await user_repo.create_user(
+        user.username, get_password_hash(user.password)
+    )
     if user_id == -1:
         raise HTTPException(status_code=409, detail="User already exists.")
 

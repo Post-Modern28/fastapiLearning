@@ -1,5 +1,5 @@
-from datetime import datetime
 import calendar
+from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -122,7 +122,9 @@ async def update_note(
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     repo = NoteRepository(db)
-    result = await repo.update_note(note_id, note.title, note.description, note.completed)
+    result = await repo.update_note(
+        note_id, note.title, note.description, note.completed
+    )
     if result == "UPDATE 1":
         return {"message": "Item successfully updated!"}
     return JSONResponse(status_code=404, content={"message": "Item not found."})
@@ -156,9 +158,7 @@ async def get_todos_analytics(
     completed_stats = {
         str(row["completed"]).lower(): row["count"] for row in status_counts
     }
-    weekday_distribution = {
-        row["weekday"].strip(): row["count"] for row in weekday_raw
-    }
+    weekday_distribution = {row["weekday"].strip(): row["count"] for row in weekday_raw}
     full_weekday_distribution = {
         day: weekday_distribution.get(day, 0) for day in calendar.day_name
     }

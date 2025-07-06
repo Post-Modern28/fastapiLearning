@@ -1,6 +1,8 @@
-from typing import Optional
-import asyncpg
 from datetime import datetime
+from typing import Optional
+
+import asyncpg
+
 
 class NoteRepository:
     def __init__(self, db: asyncpg.Connection):
@@ -13,30 +15,33 @@ class NoteRepository:
             VALUES ($1, $2, $3)
             RETURNING *
             """,
-            title, description, user_id
+            title,
+            description,
+            user_id,
         )
 
     async def get_filtered_notes(self, query: str, params: list):
         return await self.db.fetch(query, *params)
 
     async def get_note_by_id(self, note_id: int):
-        return await self.db.fetchrow(
-            "SELECT * FROM ThingsToDo WHERE id = $1", note_id
-        )
+        return await self.db.fetchrow("SELECT * FROM ThingsToDo WHERE id = $1", note_id)
 
     async def delete_note(self, note_id: int):
-        return await self.db.execute(
-            "DELETE FROM ThingsToDo WHERE id = $1", note_id
-        )
+        return await self.db.execute("DELETE FROM ThingsToDo WHERE id = $1", note_id)
 
-    async def update_note(self, note_id: int, title: str, description: str, completed: bool):
+    async def update_note(
+        self, note_id: int, title: str, description: str, completed: bool
+    ):
         return await self.db.execute(
             """
             UPDATE ThingsToDo
             SET title = $1, description = $2, completed=$3
             WHERE id = $4
             """,
-            title, description, completed, note_id
+            title,
+            description,
+            completed,
+            note_id,
         )
 
     async def bulk_complete(self, note_ids: list[int], completed: bool):
@@ -47,7 +52,8 @@ class NoteRepository:
                 completed_at = CASE WHEN $1 THEN CURRENT_TIMESTAMP ELSE NULL END
             WHERE id = ANY($2::int[])
             """,
-            completed, note_ids
+            completed,
+            note_ids,
         )
 
     async def get_analytics(self, timezone: str):
@@ -72,7 +78,7 @@ class NoteRepository:
             GROUP BY weekday, dow
             ORDER BY dow
             """,
-            timezone
+            timezone,
         )
         return total, status_counts, avg_time, weekday_raw
 

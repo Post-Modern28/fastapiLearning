@@ -4,7 +4,7 @@ from typing import Optional
 import asyncpg
 from asyncpg import UniqueViolationError
 
-from app.api.schemas.models import UserRole, RoleEnum
+from app.api.schemas.models import RoleEnum, UserRole
 
 
 class UserRepository:
@@ -19,7 +19,8 @@ class UserRepository:
                 VALUES ($1, $2)
                 RETURNING id
                 """,
-                username, hashed_password
+                username,
+                hashed_password,
             )
             return uid
         except UniqueViolationError:
@@ -31,7 +32,9 @@ class UserRepository:
             INSERT INTO user_info (user_id, full_name, email)
             VALUES ($1, $2, $3)
             """,
-            user_id, full_name, email
+            user_id,
+            full_name,
+            email,
         )
 
     async def assign_default_role(self, user_id: int):
@@ -40,7 +43,8 @@ class UserRepository:
             INSERT INTO user_roles (user_id, user_role)
             VALUES ($1, $2)
             """,
-            user_id, RoleEnum.USER.value
+            user_id,
+            RoleEnum.USER.value,
         )
 
     async def get_user_by_username(self, username: str):
@@ -50,7 +54,7 @@ class UserRepository:
             FROM users
             WHERE username = $1
             """,
-            username
+            username,
         )
 
     async def get_user_roles_by_id(self, user_id: int) -> Optional[UserRole]:
@@ -93,6 +97,6 @@ class UserRepository:
             """
             DELETE FROM users WHERE id = $1
             """,
-            user_id
+            user_id,
         )
         return result != "DELETE 0"
