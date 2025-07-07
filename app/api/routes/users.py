@@ -3,6 +3,7 @@
 import asyncpg
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import EmailStr, ValidationError
 
 from app.api.schemas.models import (
     RoleEnum,
@@ -31,7 +32,7 @@ async def get_registration_page(request: Request):
         "RegistrationPage.html",
         {
             "request": request,
-            "error_message": "",
+            "error": "",
         },
     )
 
@@ -45,11 +46,15 @@ async def register_user(
     email: str = Form(...),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
-    if not full_name: full_name=None
-    if not email: email=None
-    user = UserRegistration(
-        username=username, password=password, full_name=full_name, email=email
-    )
+    try:
+        user = UserRegistration(
+            username=username,
+            password=password,
+            full_name=full_name or None,
+            email=email or None,
+        )
+    except ValidationError as e:
+        raise e
     user_repo = UserRepository(db)
     user_id = await user_repo.create_user(
         user.username, get_password_hash(user.password)
@@ -175,7 +180,7 @@ from urllib.parse import urlencode
 @users_router.post("/update_info", response_class=RedirectResponse)
 async def update_user(
     full_name: str = Form(...),
-    email: str = Form(...),
+    email: EmailStr = Form(...),
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):

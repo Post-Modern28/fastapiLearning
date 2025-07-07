@@ -5,11 +5,13 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import Depends, FastAPI, Form, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_limiter import FastAPILimiter
+from pydantic import ValidationError
 from redis.asyncio import Redis
 
 # from fastapi_babel import Babel, BabelConfigs, BabelMiddleware, _
@@ -21,6 +23,7 @@ from app.api.schemas.models import (
 )
 from app.common.templates import templates
 from app.core.config import load_config
+from app.core.exception_handlers import validation_exception_handler, custom_request_validation_exception_handler
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 from app.security.security import (
     get_current_user_with_roles,
@@ -64,8 +67,8 @@ app.include_router(todo_router)
 # app.add_exception_handler(CustomException, custom_exception_handler)
 # app.add_exception_handler(Exception, global_exception_handler)
 # app.add_exception_handler(ExpiredTokenException, expired_token_handler)
-
-
+app.add_exception_handler(RequestValidationError, custom_request_validation_exception_handler)
+app.add_exception_handler(ValidationError, validation_exception_handler)
 # ===ROUTES===
 
 
@@ -76,7 +79,7 @@ async def get_login_page(request: Request):
         "AuthorizationPage.html",
         {
             "request": request,
-            "error_message": "",
+            "error": "",
             "created": created
         },
     )

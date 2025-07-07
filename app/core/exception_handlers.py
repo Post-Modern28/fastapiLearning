@@ -1,7 +1,15 @@
-from exceptions import *
+from urllib.parse import urlencode
+
+
+from fastapi import status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.exception_handlers import request_validation_exception_handler as fastapi_exception_handler
+from pydantic import ValidationError
+from pyexpat.errors import messages
 
 from app.api.schemas.models import CustomExceptionModel
+from app.core.exceptions import *
 
 
 async def custom_exception_handler(
@@ -33,3 +41,61 @@ async def value_error_handler(_: Request, exc: ValueError):
         status_code=400,
         content={"error": "Manual validation failed", "message": str(exc)},
     )
+
+
+async def custom_request_validation_exception_handler(request: Request, exc: RequestValidationError):
+    if request.url.path == "/users/update_info":
+        for error in exc.errors():
+            if "email" in error["loc"]:
+                query = urlencode({"error": "Invalid email address"})
+                break
+        else:
+            query = urlencode({"error": ""})
+        return RedirectResponse(url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND)
+
+    if request.url.path == "/users/register":
+        for error in exc.errors():
+            if "email" in error["loc"]:
+                query = urlencode({"error": "Invalid email address"})
+                break
+        else:
+            query = urlencode({"error": ""})
+        return RedirectResponse(url=f"/users/register?{query}", status_code=status.HTTP_302_FOUND)
+
+
+    # Default behaviour for other routes
+    return await fastapi_exception_handler(request, exc)
+
+
+
+async def validation_exception_handler(request: Request, exc: ValidationError):
+
+    if request.url.path == "/users/register":
+
+        err_messages = {
+            'username': 'Username must be 3 to 32 characters long',
+            'password': 'Password must be at least 3 characters long',
+            'email': 'Invalid email format'
+        }
+        errors = []
+        for error in exc.errors():
+            field = error["loc"][-1]
+            msg = err_messages.get(field)
+            errors.append(f"{msg}")
+
+        query = urlencode({"error": " \n ".join(errors)})
+        return RedirectResponse(url=f"/users/register?{query}", status_code=302)
+
+
+    raise exc
+
+
+
+# def custom_request_validation_handler(request: Request, exc: RequestValidationError):
+#     errors = []
+#     for error in exc.errors():
+#         field = error["loc"][-1]
+#         msg = custom_messages.get(field)
+#         errors.append({"field": field, "msg": msg, "value": error["input"]})
+#     print(errors)
+#     return JSONResponse(status_code=400, content=errors)

@@ -27,8 +27,8 @@
             </div>
         </div>
     </form>
-    {% if error_message %}
-        <p class="authorizationError">{{ error_message }}</p>
+    {% if request.query_params.get("error") %}
+        <pre class="authorizationError">{{ request.query_params.get("error") }}</pre>
     {% endif %}
 </body>
 </html>

@@ -74,13 +74,13 @@ class Contact(BaseModel):
 
 
 class UserBase(BaseModel):
-    username: str
+    username: str = Field(min_length=3, max_length=32)
 
 
 class UserRegistration(UserBase):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: str
+    password: str = Field(min_length=3)
 
 
 class UserPass(UserBase):
