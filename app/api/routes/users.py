@@ -64,11 +64,10 @@ async def register_user(
             status_code=409
         )
 
-
-
+    query = urlencode({"created": "true"})
     await user_repo.create_user_info(user_id, user.full_name, user.email)
     await user_repo.assign_default_role(user_id)
-    response = RedirectResponse(url="/", status_code=302)
+    response = RedirectResponse(url=f"/?{query}", status_code=302)
 
     return response
 
@@ -93,7 +92,6 @@ async def log_in(
             "AuthorizationPage.html",
             {
                 "request": request,
-                "wrongdata": True,
                 "error_message": "Incorrect username or password",
             },
             status_code=401,

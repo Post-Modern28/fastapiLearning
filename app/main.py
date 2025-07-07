@@ -71,12 +71,13 @@ app.include_router(todo_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def get_login_page(request: Request):
+    created = request.query_params.get("created") == "true"
     return templates.TemplateResponse(
         "AuthorizationPage.html",
         {
             "request": request,
-            "wrongdata": False,
             "error_message": "",
+            "created": created
         },
     )
 
