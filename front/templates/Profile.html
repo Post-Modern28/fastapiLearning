@@ -15,7 +15,7 @@
     </header>
     {% include "navigationBar.html" %}
 
-    <form method="post" action="/users/profile" class="authorizationWindow" style="height: auto; padding: 20px">
+    <form method="post" action="/users/update_info" class="authorizationWindow" style="height: auto; padding: 20px">
         <div class="innerAuthWind" style="height: auto; gap: 10px">
             <h2 style="margin-bottom: 10px; font-family: 'Outfit', sans-serif;">Your Profile</h2>
             <input name="username" class="authorizationBar" value="{{ user.username }}" disabled>
@@ -26,9 +26,10 @@
     </form>
 
     {% if updated %}
-        <p style="text-align:center; font-family:'Montserrat'; color: green;">Profile updated successfully.</p>
+        <p style="color: green; text-align: center;">Successfully updated!</p>
     {% elif error %}
-        <p class="authorizationError">{{ error }}</p>
+        <p style="color: red; text-align: center;">{{ error }}</p>
     {% endif %}
+
 </body>
 </html>

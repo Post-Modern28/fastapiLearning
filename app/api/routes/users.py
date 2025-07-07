@@ -45,6 +45,8 @@ async def register_user(
     email: str = Form(...),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
+    if not full_name: full_name=None
+    if not email: email=None
     user = UserRegistration(
         username=username, password=password, full_name=full_name, email=email
     )
@@ -53,7 +55,16 @@ async def register_user(
         user.username, get_password_hash(user.password)
     )
     if user_id == -1:
-        raise HTTPException(status_code=409, detail="User already exists.")
+        return templates.TemplateResponse(
+            "RegistrationPage.html",
+            {
+                "request": request,
+                "error_message": "This username already exists",
+            },
+            status_code=409
+        )
+
+
 
     await user_repo.create_user_info(user_id, user.full_name, user.email)
     await user_repo.assign_default_role(user_id)
@@ -141,12 +152,42 @@ async def delete_user(
 @users_router.get("/profile", response_class=HTMLResponse)
 async def get_profile(
     request: Request,
-    current_user=Depends(get_current_user_with_roles),
+    current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     user_repo = UserRepository(db)
     user_info = await user_repo.get_user_full_info(current_user.user_id)
+
+    updated = request.query_params.get("updated") == "true"
+    error = request.query_params.get("error") or ""
+
     return templates.TemplateResponse(
         "Profile.html",
-        {"request": request, "user": user_info, "updated": False, "error": ""},
+        {
+            "request": request,
+            "user": user_info,
+            "updated": updated,
+            "error": error,
+        },
     )
+
+
+from urllib.parse import urlencode
+
+@users_router.post("/update_info", response_class=RedirectResponse)
+async def update_user(
+    full_name: str = Form(...),
+    email: str = Form(...),
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    # FIX: add email validation
+    user_repo = UserRepository(db)
+    try:
+        await user_repo.update_user_info(current_user.user_id, full_name or None, email or None)
+        query = urlencode({"updated": "true"})
+    except Exception as e:
+        print(e)
+        query = urlencode({"error": "Internal error"})
+
+    return RedirectResponse(url=f"/users/profile?{query}", status_code=302)

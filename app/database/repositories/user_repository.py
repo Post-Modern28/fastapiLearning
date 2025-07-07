@@ -100,3 +100,17 @@ class UserRepository:
             user_id,
         )
         return result != "DELETE 0"
+
+    async def update_user_info(self, user_id: int, full_name: str, email: str) -> bool:
+        row = await self.db.fetchrow(
+            """
+            UPDATE user_info
+            SET full_name = $2, email = $3
+            WHERE user_id = $1
+            RETURNING user_id
+            """,
+            user_id,
+            full_name,
+            email
+        )
+        return row is not None

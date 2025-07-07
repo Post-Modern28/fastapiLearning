@@ -53,6 +53,22 @@ header{
     align-content: center;
     align-items: center;
 }
+
+.registrationWindow{
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 60px;
+    width: 260px;
+    height: 500px;
+    background: #D2D2D2;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.35);
+    border-radius: 5px;
+    align-content: center;
+    align-items: center;
+}
 .authLogo{
     margin-left: auto;
     margin-right: auto;
@@ -92,10 +108,21 @@ header{
     align-items: center;
     height: 250px;
 }
+
+
+.innerRegWind{
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+    align-content: center;
+    align-items: center;
+    height: 350px;
+}
+
 .authorizationBar{
     width: 207px;
     height: 42px;
-    font-family: "IBM Plex Sans","Outfit", "Monsterrat", system-ui;
+    font-family: "IBM Plex Sans","Outfit", "Montserrat", system-ui;
     color: white;
     font-size: 16px;
     background: #989898;
