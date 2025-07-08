@@ -23,7 +23,8 @@ from app.api.schemas.models import (
 )
 from app.common.templates import templates
 from app.core.config import load_config
-from app.core.exception_handlers import validation_exception_handler, custom_request_validation_exception_handler
+from app.core.exception_handlers import custom_request_validation_exception_handler, \
+    user_validation_error_handler, validation_exception_handler
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 from app.security.security import (
     get_current_user_with_roles,
@@ -69,6 +70,8 @@ app.include_router(todo_router)
 # app.add_exception_handler(ExpiredTokenException, expired_token_handler)
 app.add_exception_handler(RequestValidationError, custom_request_validation_exception_handler)
 app.add_exception_handler(ValidationError, validation_exception_handler)
+
+# app.add_exception_handler(ValidationError, user_validation_error_handler)
 # ===ROUTES===
 
 

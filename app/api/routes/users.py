@@ -184,7 +184,6 @@ async def update_user(
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
-    # FIX: add email validation
     user_repo = UserRepository(db)
     try:
         await user_repo.update_user_info(current_user.user_id, full_name or None, email or None)

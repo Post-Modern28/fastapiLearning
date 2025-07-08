@@ -3,6 +3,7 @@ from typing import Union
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 
 class CustomException(HTTPException):
@@ -25,3 +26,7 @@ class InvalidToken(HTTPException):
     ):
         super().__init__(status_code=401, detail=detail)
         self.message = message
+
+
+class UserRegistrationValidationError(ValidationError):
+    pass

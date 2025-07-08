@@ -90,12 +90,21 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
     raise exc
 
 
+async def user_validation_error_handler(request: Request, exc: UserRegistrationValidationError):
+    err_messages = {
+        'username': 'Username must be 3 to 32 characters long',
+        'password': 'Password must be at least 3 characters long',
+        'email': 'Invalid email format'
+    }
 
-# def custom_request_validation_handler(request: Request, exc: RequestValidationError):
-#     errors = []
-#     for error in exc.errors():
-#         field = error["loc"][-1]
-#         msg = custom_messages.get(field)
-#         errors.append({"field": field, "msg": msg, "value": error["input"]})
-#     print(errors)
-#     return JSONResponse(status_code=400, content=errors)
+    errors = []
+    for error in exc.errors():
+        field = error["loc"][-1]
+        msg = err_messages.get(field, error["msg"])
+        errors.append(msg)
+
+    query = urlencode({"error": " \n ".join(errors)})
+    if request.url.path == "/users/register":
+        return RedirectResponse(url=f"/users/register?{query}", status_code=302)
+    if request.url.path == "/users/update_info":
+        return RedirectResponse(url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND)
