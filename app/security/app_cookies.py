@@ -1,9 +1,7 @@
-import uuid
-from datetime import datetime
 from uuid import uuid4
 
-from fastapi import Cookie, FastAPI, HTTPException, Response
-from itsdangerous import BadData, BadSignature, SignatureExpired, TimestampSigner
+from fastapi import Response
+from itsdangerous import TimestampSigner
 
 sessions = dict()
 signer = TimestampSigner(secret_key="very-secret-key")

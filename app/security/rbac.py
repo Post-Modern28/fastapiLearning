@@ -6,7 +6,6 @@ from fastapi_limiter.depends import RateLimiter
 
 from app.api.schemas.models import RoleEnum, UserRole
 from app.database.repositories.note_repository import NoteRepository
-from app.database.repositories.user_repository import UserRepository
 from app.security.security import get_current_user_with_roles
 
 

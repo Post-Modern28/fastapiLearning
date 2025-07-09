@@ -4,13 +4,14 @@ from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.api.schemas.models import RoleEnum, Todo, TodoReturn, UserRole
 from app.common.templates import templates
 from app.database.database import get_db_connection
 from app.database.repositories.note_repository import NoteRepository
+from app.database.repositories.user_repository import UserRepository
 from app.helpers.db_helpers import check_by_id, get_table_columns
 from app.security.rbac import OwnershipChecker, PermissionChecker
 from app.security.security import get_current_user_with_roles
@@ -37,10 +38,18 @@ async def get_user_notes(
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
+    user_repo = UserRepository(db)
+    user_info = await user_repo.get_user_full_info(current_user.user_id)
     repo = NoteRepository(db)
     rows = await repo.get_user_notes(current_user.user_id)
     return templates.TemplateResponse(
-        "MyNotes.html", {"request": request, "user": current_user, "todos": rows}
+        "MyNotes.html",
+        {
+            "request": request,
+            "user": current_user,
+            "user_profile": user_info,
+            "todos": rows,
+        },
     )
 
 

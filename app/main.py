@@ -3,13 +3,13 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import asyncpg
 import uvicorn
-from fastapi import Depends, FastAPI, Form, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from fastapi_limiter import FastAPILimiter
 from pydantic import ValidationError
 from redis.asyncio import Redis
@@ -23,8 +23,12 @@ from app.api.schemas.models import (
 )
 from app.common.templates import templates
 from app.core.config import load_config
-from app.core.exception_handlers import custom_request_validation_exception_handler, \
-    user_validation_error_handler, validation_exception_handler
+from app.core.exception_handlers import (
+    custom_request_validation_exception_handler,
+    validation_exception_handler,
+)
+from app.database.database import get_db_connection
+from app.database.repositories.user_repository import UserRepository
 from app.security.rbac import PermissionChecker, role_based_rate_limit
 from app.security.security import (
     get_current_user_with_roles,
@@ -68,7 +72,9 @@ app.include_router(todo_router)
 # app.add_exception_handler(CustomException, custom_exception_handler)
 # app.add_exception_handler(Exception, global_exception_handler)
 # app.add_exception_handler(ExpiredTokenException, expired_token_handler)
-app.add_exception_handler(RequestValidationError, custom_request_validation_exception_handler)
+app.add_exception_handler(
+    RequestValidationError, custom_request_validation_exception_handler
+)
 app.add_exception_handler(ValidationError, validation_exception_handler)
 
 # app.add_exception_handler(ValidationError, user_validation_error_handler)
@@ -80,24 +86,21 @@ async def get_login_page(request: Request):
     created = request.query_params.get("created") == "true"
     return templates.TemplateResponse(
         "AuthorizationPage.html",
-        {
-            "request": request,
-            "error": "",
-            "created": created
-        },
+        {"request": request, "error": "", "created": created},
     )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
-    request: Request, current_user: UserRole = Depends(get_current_user_with_roles)
+    request: Request,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
 ):
+    user_repo = UserRepository(db)
+    user_info = await user_repo.get_user_full_info(current_user.user_id)
     return templates.TemplateResponse(
         "Dashboard.html",
-        {
-            "request": request,
-            "user": current_user,
-        },
+        {"request": request, "user": current_user, "user_profile": user_info},
     )
 
 

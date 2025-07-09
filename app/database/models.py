@@ -3,15 +3,9 @@ from enum import Enum as PyEnum
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
     Enum,
-    Float,
     ForeignKey,
-    Integer,
     String,
-    Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 

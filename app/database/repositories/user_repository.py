@@ -86,9 +86,19 @@ class UserRepository:
     async def get_all_users_full_info(self):
         return await self.db.fetch(
             """
-            SELECT * 
-            FROM user_info 
-            JOIN users ON users.id = user_info.user_id
+            WITH user_roles_agg AS (
+                SELECT user_id, ARRAY_AGG(user_role) AS roles
+                FROM user_roles
+                WHERE disabled = false
+                GROUP BY user_id
+            )
+            SELECT 
+                users.username,
+                user_info.*,
+                COALESCE(user_roles_agg.roles, ARRAY[]::role_enum[]) AS roles
+            FROM users
+            JOIN user_info ON user_info.user_id = users.id
+            LEFT JOIN user_roles_agg ON user_roles_agg.user_id = users.id
             """
         )
 
@@ -111,6 +121,6 @@ class UserRepository:
             """,
             user_id,
             full_name,
-            email
+            email,
         )
         return row is not None

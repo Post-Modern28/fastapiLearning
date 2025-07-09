@@ -1,14 +1,15 @@
 # app/api/routes/users.py
 
+from urllib.parse import urlencode
+
 import asyncpg
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import EmailStr, ValidationError
 
 from app.api.schemas.models import (
     RoleEnum,
     UserInfo,
-    UserLogin,
     UserRegistration,
     UserRole,
 )
@@ -54,7 +55,7 @@ async def register_user(
             email=email or None,
         )
     except ValidationError as e:
-        raise e
+        raise ValidationError() from e
     user_repo = UserRepository(db)
     user_id = await user_repo.create_user(
         user.username, get_password_hash(user.password)
@@ -66,7 +67,7 @@ async def register_user(
                 "request": request,
                 "error_message": "This username already exists",
             },
-            status_code=409
+            status_code=409,
         )
 
     query = urlencode({"created": "true"})
@@ -123,7 +124,7 @@ async def get_user(
     return UserInfo(**dict(res))
 
 
-@users_router.post("/get_users", dependencies=[Depends(role_based_rate_limit)])
+@users_router.get("/all_users", response_class=HTMLResponse)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.MODERATOR])
 async def get_users(
     request: Request,
@@ -131,10 +132,17 @@ async def get_users(
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     user_repo = UserRepository(db)
+    user_info = await user_repo.get_user_full_info(current_user.user_id)
     res = await user_repo.get_all_users_full_info()
-    if not res:
-        return JSONResponse(status_code=404, content={"message": "Users not found"})
-    return [UserInfo(**dict(usr)) for usr in res]
+    return templates.TemplateResponse(
+        "AllUsers.html",
+        {
+            "request": request,
+            "user": current_user,
+            "user_profile": user_info,
+            "users": res or [],
+        },
+    )
 
 
 @users_router.delete("/delete_user/{user_id}")
@@ -168,14 +176,13 @@ async def get_profile(
         "Profile.html",
         {
             "request": request,
-            "user": user_info,
+            "user": current_user,
+            "user_profile": user_info,
             "updated": updated,
             "error": error,
         },
     )
 
-
-from urllib.parse import urlencode
 
 @users_router.post("/update_info", response_class=RedirectResponse)
 async def update_user(
@@ -186,7 +193,9 @@ async def update_user(
 ):
     user_repo = UserRepository(db)
     try:
-        await user_repo.update_user_info(current_user.user_id, full_name or None, email or None)
+        await user_repo.update_user_info(
+            current_user.user_id, full_name or None, email or None
+        )
         query = urlencode({"updated": "true"})
     except Exception as e:
         print(e)

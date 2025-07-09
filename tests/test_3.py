@@ -1,5 +1,4 @@
 def test_ownership_access(client):
-
     # Admin
     login_data = {"username": "admin", "password": "pass"}
     response = client.post("/users/log_in", json=login_data)

@@ -7,7 +7,7 @@ def test_role_based_access(client):
 
     response = client.get("/admin", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
-    assert response.json() == {"message": f"Hello, user 30!"}
+    assert response.json() == {"message": "Hello, user 30!"}
 
     # User: doesn't have access
     login_data = {"username": "badboy", "password": "sokol"}

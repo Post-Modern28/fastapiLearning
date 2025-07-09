@@ -1,5 +1,4 @@
 import asyncpg
-from fastapi.exceptions import HTTPException
 
 from app.core.config import load_config
 

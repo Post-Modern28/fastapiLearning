@@ -18,9 +18,9 @@
     <form method="post" action="/users/update_info" class="authorizationWindow" style="height: auto; padding: 20px">
         <div class="innerAuthWind" style="height: auto; gap: 10px">
             <h2 style="margin-bottom: 10px; font-family: 'Outfit', sans-serif;">Your Profile</h2>
-            <input name="username" class="authorizationBar" value="{{ user.username }}" disabled>
-            <input name="full_name" class="authorizationBar" placeholder="Full name" value="{{ user.full_name or '' }}">
-            <input name="email" class="authorizationBar" placeholder="Email" value="{{ user.email or '' }}">
+            <input name="username" class="authorizationBar" value="{{ user_profile.username }}" disabled>
+            <input name="full_name" class="authorizationBar" placeholder="Full name" value="{{ user_profile.full_name or '' }}">
+            <input name="email" class="authorizationBar" placeholder="Email" value="{{ user_profile.email or '' }}">
             <button type="submit" class="logInButton">Save</button>
         </div>
     </form>

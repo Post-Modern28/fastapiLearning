@@ -16,13 +16,13 @@
     </header>
     {% include "navigationBar.html" %}
 
-    <!-- Подсказка / приветствие -->
+
     <div class="hint">
-        Welcome back<br>
-        {{ user.username }}!
+        Welcome back,<br>
+        {{ user_profile.username }}!
     </div>
 
-    <!-- Блок кнопок/действий -->
+
     <div class="threeButtons">
         <button class="downloadButton csvDownload">CSV экспорт</button>
         <button class="downloadButton excelDownload">Excel экспорт</button>

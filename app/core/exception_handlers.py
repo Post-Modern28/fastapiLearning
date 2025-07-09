@@ -1,12 +1,13 @@
 from urllib.parse import urlencode
 
-
-from fastapi import status
+from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.exception_handlers import request_validation_exception_handler as fastapi_exception_handler
+from fastapi.exception_handlers import (
+    request_validation_exception_handler as fastapi_exception_handler,
+)
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError
-from pyexpat.errors import messages
 
 from app.api.schemas.models import CustomExceptionModel
 from app.core.exceptions import *
@@ -43,7 +44,9 @@ async def value_error_handler(_: Request, exc: ValueError):
     )
 
 
-async def custom_request_validation_exception_handler(request: Request, exc: RequestValidationError):
+async def custom_request_validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
     if request.url.path == "/users/update_info":
         for error in exc.errors():
             if "email" in error["loc"]:
@@ -51,7 +54,9 @@ async def custom_request_validation_exception_handler(request: Request, exc: Req
                 break
         else:
             query = urlencode({"error": ""})
-        return RedirectResponse(url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(
+            url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
+        )
 
     if request.url.path == "/users/register":
         for error in exc.errors():
@@ -60,22 +65,20 @@ async def custom_request_validation_exception_handler(request: Request, exc: Req
                 break
         else:
             query = urlencode({"error": ""})
-        return RedirectResponse(url=f"/users/register?{query}", status_code=status.HTTP_302_FOUND)
-
+        return RedirectResponse(
+            url=f"/users/register?{query}", status_code=status.HTTP_302_FOUND
+        )
 
     # Default behaviour for other routes
     return await fastapi_exception_handler(request, exc)
 
 
-
 async def validation_exception_handler(request: Request, exc: ValidationError):
-
     if request.url.path == "/users/register":
-
         err_messages = {
-            'username': 'Username must be 3 to 32 characters long',
-            'password': 'Password must be at least 3 characters long',
-            'email': 'Invalid email format'
+            "username": "Username must be 3 to 32 characters long",
+            "password": "Password must be at least 3 characters long",
+            "email": "Invalid email format",
         }
         errors = []
         for error in exc.errors():
@@ -84,17 +87,20 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
             errors.append(f"{msg}")
 
         query = urlencode({"error": " \n ".join(errors)})
-        return RedirectResponse(url=f"/users/register?{query}", status_code=302)
-
+        return RedirectResponse(
+            url=f"/users/register?{query}", status_code=status.HTTP_302_FOUND
+        )
 
     raise exc
 
 
-async def user_validation_error_handler(request: Request, exc: UserRegistrationValidationError):
+async def user_validation_error_handler(
+    request: Request, exc: UserRegistrationValidationError
+):
     err_messages = {
-        'username': 'Username must be 3 to 32 characters long',
-        'password': 'Password must be at least 3 characters long',
-        'email': 'Invalid email format'
+        "username": "Username must be 3 to 32 characters long",
+        "password": "Password must be at least 3 characters long",
+        "email": "Invalid email format",
     }
 
     errors = []
@@ -105,6 +111,10 @@ async def user_validation_error_handler(request: Request, exc: UserRegistrationV
 
     query = urlencode({"error": " \n ".join(errors)})
     if request.url.path == "/users/register":
-        return RedirectResponse(url=f"/users/register?{query}", status_code=302)
+        return RedirectResponse(
+            url=f"/users/register?{query}", status_code=status.HTTP_302_FOUND
+        )
     if request.url.path == "/users/update_info":
-        return RedirectResponse(url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(
+            url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
+        )
