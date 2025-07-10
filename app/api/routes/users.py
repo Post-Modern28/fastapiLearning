@@ -3,7 +3,7 @@
 from urllib.parse import urlencode
 
 import asyncpg
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import EmailStr, ValidationError
 
@@ -38,7 +38,9 @@ async def get_registration_page(request: Request):
     )
 
 
-@users_router.post("/register", response_model=UserInfo, status_code=201)
+@users_router.post(
+    "/register", response_model=UserInfo, status_code=status.HTTP_201_CREATED
+)
 async def register_user(
     request: Request,
     username: str = Form(...),
@@ -67,13 +69,13 @@ async def register_user(
                 "request": request,
                 "error_message": "This username already exists",
             },
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
         )
 
     query = urlencode({"created": "true"})
     await user_repo.create_user_info(user_id, user.full_name, user.email)
     await user_repo.assign_default_role(user_id)
-    response = RedirectResponse(url=f"/?{query}", status_code=302)
+    response = RedirectResponse(url=f"/?{query}", status_code=status.HTTP_302_FOUND)
 
     return response
 
@@ -100,34 +102,22 @@ async def log_in(
                 "request": request,
                 "error_message": "Incorrect username or password",
             },
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
     user_id = row["id"]
     token = create_jwt_token({"sub": str(user_id), "username": username})
 
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
     response.set_cookie(key="access_token", value=token, httponly=True)
     return response
-
-
-@users_router.post("/get_user/{user_id}", dependencies=[Depends(role_based_rate_limit)])
-async def get_user(
-    request: Request,
-    user_id: int,
-    db: asyncpg.Connection = Depends(get_db_connection),
-):
-    user_repo = UserRepository(db)
-    res = await user_repo.get_user_full_info(user_id)
-    if not res:
-        return JSONResponse(status_code=404, content={"message": "User not found"})
-    return UserInfo(**dict(res))
 
 
 @users_router.get("/all_users", response_class=HTMLResponse)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.MODERATOR])
 async def get_users(
     request: Request,
+    message: str = Query(default=None),
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
@@ -141,13 +131,16 @@ async def get_users(
             "user": current_user,
             "user_profile": user_info,
             "users": res or [],
+            "message": message,
         },
     )
 
 
-@users_router.delete("/delete_user/{user_id}")
+@users_router.post("/{user_id}/delete")  # For HTML forms
+@users_router.delete("/{user_id}")
 @PermissionChecker([RoleEnum.ADMIN])
 async def delete_user(
+    request: Request,
     user_id: int,
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
@@ -155,9 +148,15 @@ async def delete_user(
     user_repo = UserRepository(db)
     success = await user_repo.delete_user_by_id(user_id)
     if not success:
-        return JSONResponse(status_code=404, content={"message": "User not found"})
+        query = urlencode({"message": "User not found"})
+        return RedirectResponse(
+            url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
+        )
 
-    return {"message": "User and his todos are successfully deleted!"}
+    query = urlencode({"message": "User and his todos are successfully deleted!"})
+    return RedirectResponse(
+        url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
+    )
 
 
 @users_router.get("/profile", response_class=HTMLResponse)
@@ -185,6 +184,7 @@ async def get_profile(
 
 
 @users_router.post("/update_info", response_class=RedirectResponse)
+@users_router.patch("/update_info", response_class=RedirectResponse)
 async def update_user(
     full_name: str = Form(...),
     email: EmailStr = Form(...),
@@ -201,4 +201,21 @@ async def update_user(
         print(e)
         query = urlencode({"error": "Internal error"})
 
-    return RedirectResponse(url=f"/users/profile?{query}", status_code=302)
+    return RedirectResponse(
+        url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
+    )
+
+
+@users_router.get("/{user_id}", dependencies=[Depends(role_based_rate_limit)])
+async def get_user(
+    request: Request,
+    user_id: int,
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    user_repo = UserRepository(db)
+    res = await user_repo.get_user_full_info(user_id)
+    if not res:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"message": "User not found"}
+        )
+    return UserInfo(**dict(res))

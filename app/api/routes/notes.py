@@ -4,7 +4,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from app.api.schemas.models import RoleEnum, Todo, TodoReturn, UserRole
@@ -19,7 +19,7 @@ from app.security.security import get_current_user_with_roles
 todo_router = APIRouter(prefix="/notes", tags=["Notes"])
 
 
-@todo_router.post("/create_note", status_code=201)
+@todo_router.post("/create_note", status_code=status.HTTP_201_CREATED)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
 async def create_note(
     note: Todo,
@@ -31,7 +31,7 @@ async def create_note(
     return {"message": "Note created", "item": TodoReturn(**row)}
 
 
-@todo_router.get("/my_notes", status_code=201)
+@todo_router.get("/my_notes", status_code=status.HTTP_200_OK)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
 async def get_user_notes(
     request: Request,
@@ -71,7 +71,9 @@ async def get_note(
 
     allowed = await get_table_columns("thingstodo", db)
     if column not in allowed:
-        raise HTTPException(status_code=400, detail="Invalid sort field")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid sort field"
+        )
 
     params = [limit, offset]
     clauses = ["TRUE"]
@@ -104,7 +106,10 @@ async def get_note(
 
     res = await repo.get_filtered_notes(query, params)
     if not res:
-        return JSONResponse(status_code=404, content={"message": "Items not found"})
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Items not found"},
+        )
     return [TodoReturn(**row) for row in res]
 
 
@@ -118,7 +123,9 @@ async def get_note_by_id(
     repo = NoteRepository(db)
     row = await repo.get_note_by_id(note_id)
     if not row:
-        return JSONResponse(status_code=404, content={"message": "Item not found"})
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"message": "Item not found"}
+        )
     return TodoReturn(**dict(row))
 
 
@@ -133,7 +140,9 @@ async def delete_note(
     repo = NoteRepository(db)
     result = await repo.delete_note(note_id)
     if result == "DELETE 0":
-        return JSONResponse(status_code=404, content={"message": "Item not found"})
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"message": "Item not found"}
+        )
     return {"message": "Item successfully deleted!"}
 
 
@@ -151,7 +160,9 @@ async def update_note(
     )
     if result == "UPDATE 1":
         return {"message": "Item successfully updated!"}
-    return JSONResponse(status_code=404, content={"message": "Item not found."})
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"message": "Item not found."}
+    )
 
 
 @todo_router.patch("/complete_notes")
