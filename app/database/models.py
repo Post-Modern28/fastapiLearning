@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional
-
+from sqlalchemy import UniqueConstraint
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import (
     Enum,
     ForeignKey,
@@ -40,9 +41,9 @@ class User(Base):
 class UserInfo(Base):
     __tablename__ = "user_info"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True
     )
     full_name: Mapped[Optional[str]] = mapped_column(String(100))
     email: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
@@ -50,14 +51,23 @@ class UserInfo(Base):
     user = relationship("User", back_populates="info")
 
 
+
+
+
 class UserRole(Base):
     __tablename__ = "user_roles"
+    __table_args__ = (
+        UniqueConstraint("user_id", "user_role", name="uq_user_role_pair"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    user_role: Mapped[str] = mapped_column(Enum(RoleEnum), nullable=False)
-    disabled: Mapped[bool] = mapped_column(default=False)
 
+
+    user_role: Mapped[RoleEnum] = mapped_column(
+        ENUM(RoleEnum, name="role_enum", create_type=False),
+        nullable=False
+    )
     user = relationship("User", back_populates="roles")
 
 

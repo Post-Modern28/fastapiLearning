@@ -62,7 +62,7 @@ class UserRepository:
             """
             SELECT user_id, array_agg(user_role) AS roles
             FROM user_roles
-            WHERE disabled = false AND user_id = $1
+            WHERE user_id = $1
             GROUP BY user_id
             """,
             user_id,
@@ -89,7 +89,6 @@ class UserRepository:
             WITH user_roles_agg AS (
                 SELECT user_id, ARRAY_AGG(user_role) AS roles
                 FROM user_roles
-                WHERE disabled = false
                 GROUP BY user_id
             )
             SELECT 
@@ -124,3 +123,30 @@ class UserRepository:
             email,
         )
         return row is not None
+
+
+    async def add_user_role(self, user_id, role):
+        try:
+            result = await self.db.execute(
+                """
+                INSERT INTO user_roles (user_id, user_role)
+                VALUES ($1, $2)
+                RETURNING id
+                """,
+                user_id,
+                role
+            )
+        except UniqueViolationError:
+            return False  # Role has already been assigned
+        return result is not None
+
+    async def remove_user_role(self, user_id, role):
+        result = await self.db.execute(
+            """
+            DELETE FROM user_roles 
+            WHERE id = $1 AND user_role = $2
+            """,
+            user_id,
+            role
+        )
+        return result != "DELETE 0"

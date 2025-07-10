@@ -219,3 +219,15 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND, content={"message": "User not found"}
         )
     return UserInfo(**dict(res))
+
+
+@users_router.post('/users/{{ user.user_id }}/roles/remove')
+@PermissionChecker([RoleEnum.ADMIN])
+async def remove_user_role(
+    request: Request,
+    user_id: int,
+    role: str = Form(...),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    pass
+
