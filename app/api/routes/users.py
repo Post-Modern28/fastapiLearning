@@ -152,8 +152,7 @@ async def delete_user(
     else:
         query = urlencode({"message": "User and his todos are successfully deleted!"})
     return RedirectResponse(
-        url=f"/users/all_users?{query}",
-        status_code=status.HTTP_302_FOUND
+        url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
     )
 
 
@@ -200,8 +199,7 @@ async def update_user(
         query = urlencode({"error": "Internal error"})
 
     return RedirectResponse(
-        url=f"/users/profile?{query}",
-        status_code=status.HTTP_302_FOUND
+        url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
     )
 
 
@@ -220,8 +218,7 @@ async def get_user(
     return UserInfo(**dict(res))
 
 
-
-@users_router.post('/{user_id}/roles/add')
+@users_router.post("/{user_id}/roles/add")
 @PermissionChecker([RoleEnum.ADMIN])
 async def add_user_role(
     request: Request,
@@ -237,11 +234,11 @@ async def add_user_role(
     else:
         query = urlencode({"message": "Error: couldn't add role"})
     return RedirectResponse(
-        url=f"/users/all_users?{query}",
-        status_code=status.HTTP_302_FOUND
+        url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
     )
 
-@users_router.post('/{user_id}/roles/remove')
+
+@users_router.post("/{user_id}/roles/remove")
 @PermissionChecker([RoleEnum.ADMIN])
 async def remove_user_role(
     request: Request,
@@ -257,8 +254,5 @@ async def remove_user_role(
     else:
         query = urlencode({"message": "Error: couldn't remove role"})
     return RedirectResponse(
-        url=f"/users/all_users?{query}",
-        status_code=status.HTTP_302_FOUND
+        url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
     )
-
-

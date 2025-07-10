@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError
 
 from app.api.schemas.models import CustomExceptionModel
+from app.common.templates import templates
 from app.core.exceptions import *
 
 
@@ -34,7 +35,7 @@ async def expired_token_handler(request: Request, exc: ExpiredTokenException):
 
 
 async def global_exception_handler(_: Request, __: Exception):
-    return JSONResponse(status_code=421, content={"error": "Internal server error"})
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
 async def value_error_handler(_: Request, exc: ValueError):
@@ -118,3 +119,21 @@ async def user_validation_error_handler(
         return RedirectResponse(
             url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
         )
+
+
+async def not_found_handler(request: Request, exc: HTTPException):
+    print("Got exception:")
+    print(exc)
+    if exc.status_code == status.HTTP_404_NOT_FOUND:
+        return templates.TemplateResponse(
+            "Error404.html", {"request": request}, status_code=404
+        )
+    raise exc
+
+
+async def internal_server_error_handler(request: Request, exc: Exception):
+    print("Internal error:")
+    print(exc)
+    return templates.TemplateResponse(
+        "Error500.html", {"request": request}, status_code=500
+    )

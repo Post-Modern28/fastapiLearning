@@ -1,13 +1,14 @@
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional
-from sqlalchemy import UniqueConstraint
-from sqlalchemy.dialects.postgresql import ENUM
+
 from sqlalchemy import (
     Enum,
     ForeignKey,
     String,
+    UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -42,16 +43,12 @@ class UserInfo(Base):
     __tablename__ = "user_info"
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     full_name: Mapped[Optional[str]] = mapped_column(String(100))
     email: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
 
     user = relationship("User", back_populates="info")
-
-
-
 
 
 class UserRole(Base):
@@ -63,10 +60,8 @@ class UserRole(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
-
     user_role: Mapped[RoleEnum] = mapped_column(
-        ENUM(RoleEnum, name="role_enum", create_type=False),
-        nullable=False
+        ENUM(RoleEnum, name="role_enum", create_type=False), nullable=False
     )
     user = relationship("User", back_populates="roles")
 

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>404 - Not Found</title>
+    {% include "headlinks.html" with context %}
+</head>
+<body>
+    <header>
+        <div class="shapka">
+            <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
+            <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
+        </div>
+    </header>
+
+        <h1>Page not found :( <br> The page you’re looking for doesn’t exist or has been moved.</h1>
+
+</body>
+</html>
+
+

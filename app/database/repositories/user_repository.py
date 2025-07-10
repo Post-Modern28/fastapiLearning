@@ -124,7 +124,6 @@ class UserRepository:
         )
         return row is not None
 
-
     async def add_user_role(self, user_id: int, role: str):
         try:
             result = await self.db.execute(
@@ -134,7 +133,7 @@ class UserRepository:
                 RETURNING id
                 """,
                 user_id,
-                role
+                role,
             )
         except UniqueViolationError:
             return False  # Role has already been assigned
@@ -147,6 +146,6 @@ class UserRepository:
             WHERE user_id = $1 AND user_role = $2
             """,
             user_id,
-            role
+            role,
         )
         return result != "DELETE 0"

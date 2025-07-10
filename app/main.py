@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import asyncpg
+import starlette
 import uvicorn
 from fastapi import Depends, FastAPI, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +26,8 @@ from app.common.templates import templates
 from app.core.config import load_config
 from app.core.exception_handlers import (
     custom_request_validation_exception_handler,
+    internal_server_error_handler,
+    not_found_handler,
     validation_exception_handler,
 )
 from app.database.database import get_db_connection
@@ -76,8 +79,10 @@ app.add_exception_handler(
     RequestValidationError, custom_request_validation_exception_handler
 )
 app.add_exception_handler(ValidationError, validation_exception_handler)
+app.add_exception_handler(starlette.exceptions.HTTPException, not_found_handler)
+app.add_exception_handler(Exception, internal_server_error_handler)
 
-# app.add_exception_handler(ValidationError, user_validation_error_handler)
+
 # ===ROUTES===
 
 

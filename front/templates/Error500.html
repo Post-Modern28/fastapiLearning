@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>500 - Internal error</title>
+    {% include "headlinks.html" with context %}
+</head>
+<body>
+    <header>
+        <div class="shapka">
+            <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
+            <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
+        </div>
+    </header>
+
+        <h1>Oops, something went wrong :( <br> Try reloading the page or visit the website later.</h1>
+
+</body>
+</html>
+
+
+

@@ -31,7 +31,9 @@ class NoteRepository:
         return await self.db.fetch(query, *params)
 
     async def get_note_by_id(self, note_id: int):
-        return await self.db.fetchrow("SELECT * FROM things_to_do WHERE id = $1", note_id)
+        return await self.db.fetchrow(
+            "SELECT * FROM things_to_do WHERE id = $1", note_id
+        )
 
     async def delete_note(self, note_id: int):
         return await self.db.execute("DELETE FROM things_to_do WHERE id = $1", note_id)
