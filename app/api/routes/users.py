@@ -57,7 +57,7 @@ async def register_user(
             email=email or None,
         )
     except ValidationError as e:
-        raise ValidationError() from e
+        raise e
     user_repo = UserRepository(db)
     user_id = await user_repo.create_user(
         user.username, get_password_hash(user.password)
@@ -149,13 +149,11 @@ async def delete_user(
     success = await user_repo.delete_user_by_id(user_id)
     if not success:
         query = urlencode({"message": "User not found"})
-        return RedirectResponse(
-            url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
-        )
-
-    query = urlencode({"message": "User and his todos are successfully deleted!"})
+    else:
+        query = urlencode({"message": "User and his todos are successfully deleted!"})
     return RedirectResponse(
-        url=f"/users/all_users?{query}", status_code=status.HTTP_302_FOUND
+        url=f"/users/all_users?{query}",
+        status_code=status.HTTP_302_FOUND
     )
 
 
@@ -202,7 +200,8 @@ async def update_user(
         query = urlencode({"error": "Internal error"})
 
     return RedirectResponse(
-        url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
+        url=f"/users/profile?{query}",
+        status_code=status.HTTP_302_FOUND
     )
 
 
@@ -221,13 +220,45 @@ async def get_user(
     return UserInfo(**dict(res))
 
 
-@users_router.post('/users/{{ user.user_id }}/roles/remove')
+
+@users_router.post('/{user_id}/roles/add')
+@PermissionChecker([RoleEnum.ADMIN])
+async def add_user_role(
+    request: Request,
+    user_id: int,
+    role: str = Form(...),
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    user_repo = UserRepository(db)
+    res = await user_repo.add_user_role(user_id, role)
+    if res:
+        query = urlencode({"message": "Role was added"})
+    else:
+        query = urlencode({"message": "Error: couldn't add role"})
+    return RedirectResponse(
+        url=f"/users/all_users?{query}",
+        status_code=status.HTTP_302_FOUND
+    )
+
+@users_router.post('/{user_id}/roles/remove')
 @PermissionChecker([RoleEnum.ADMIN])
 async def remove_user_role(
     request: Request,
     user_id: int,
     role: str = Form(...),
+    current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
-    pass
+    user_repo = UserRepository(db)
+    res = await user_repo.remove_user_role(user_id, role)
+    if res:
+        query = urlencode({"message": "Role was removed"})
+    else:
+        query = urlencode({"message": "Error: couldn't remove role"})
+    return RedirectResponse(
+        url=f"/users/all_users?{query}",
+        status_code=status.HTTP_302_FOUND
+    )
+
 

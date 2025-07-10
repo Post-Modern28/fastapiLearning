@@ -5,7 +5,7 @@ from app.core.config import load_config
 config = load_config()
 DATABASE_URL = config.db.database_url
 
-VALID_TABLES = {"users", "ThingsToDo", "user_info", "user_roles"}
+VALID_TABLES = {"users", "things_to_do", "user_info", "user_roles"}
 
 
 async def get_db_connection():

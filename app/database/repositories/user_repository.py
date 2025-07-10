@@ -125,7 +125,7 @@ class UserRepository:
         return row is not None
 
 
-    async def add_user_role(self, user_id, role):
+    async def add_user_role(self, user_id: int, role: str):
         try:
             result = await self.db.execute(
                 """
@@ -140,11 +140,11 @@ class UserRepository:
             return False  # Role has already been assigned
         return result is not None
 
-    async def remove_user_role(self, user_id, role):
+    async def remove_user_role(self, user_id: int, role: str):
         result = await self.db.execute(
             """
             DELETE FROM user_roles 
-            WHERE id = $1 AND user_role = $2
+            WHERE user_id = $1 AND user_role = $2
             """,
             user_id,
             role
