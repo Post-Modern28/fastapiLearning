@@ -11,7 +11,7 @@ from app.api.schemas.models import (
     RoleEnum,
     UserInfo,
     UserRegistration,
-    UserRole,
+    UserRole, PasswordValidator,
 )
 from app.common.templates import templates
 from app.database.database import get_db_connection
@@ -111,21 +111,6 @@ async def change_user_password(
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
 
-
-    try:
-        UserRegistration.model_fields['password'].validate(new_password, {}, loc='new_password')
-    except ValidationError as e:
-
-        # Better approach: add this to validation_exception_handler
-        return templates.TemplateResponse(
-            "ChangePasswordPage.html",
-            {
-                "request": request,
-                "user": current_user,
-                "error": "New password must be 3 chars long",
-            },
-            status_code=status.HTTP_401_UNAUTHORIZED,
-        )
     user_repo = UserRepository(db)
 
     row = await user_repo.get_user_by_id(current_user.user_id)
@@ -143,6 +128,20 @@ async def change_user_password(
                 "error": "Incorrect old password",
             },
             status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    try:
+        PasswordValidator(password=new_password)
+    except ValidationError as e:
+        # Better approach: add this to validation_exception_handler
+        return templates.TemplateResponse(
+            "ChangePasswordPage.html",
+            {
+                "request": request,
+                "user": current_user,
+                "error": "New password must be at least 3 characters long",
+            },
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
     await user_repo.change_password(current_user.user_id, get_password_hash(new_password))

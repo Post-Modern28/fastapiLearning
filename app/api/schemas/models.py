@@ -76,12 +76,16 @@ class Contact(BaseModel):
 class UserBase(BaseModel):
     username: str = Field(min_length=3, max_length=32)
 
+PASSWORD_FIELD = Field(min_length=3, max_length=64, description="User password")
 
-class UserRegistration(UserBase):
+class UserRegistration(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: str = Field(min_length=3)
+    password: str = PASSWORD_FIELD
 
+class PasswordValidator(BaseModel):
+    password: str = PASSWORD_FIELD
 
 class UserPass(UserBase):
     """Model for authentication"""
