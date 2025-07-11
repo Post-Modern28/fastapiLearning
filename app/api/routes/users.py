@@ -39,7 +39,7 @@ async def get_registration_page(request: Request):
 
 
 @users_router.post(
-    "/register", response_model=UserInfo, status_code=status.HTTP_201_CREATED
+    "/register", status_code=status.HTTP_201_CREATED
 )
 async def register_user(
     request: Request,
@@ -67,7 +67,7 @@ async def register_user(
             "RegistrationPage.html",
             {
                 "request": request,
-                "error_message": "This username already exists",
+                "error": "This username already exists",
             },
             status_code=status.HTTP_409_CONFLICT,
         )
@@ -76,6 +76,79 @@ async def register_user(
     await user_repo.create_user_info(user_id, user.full_name, user.email)
     await user_repo.assign_default_role(user_id)
     response = RedirectResponse(url=f"/?{query}", status_code=status.HTTP_302_FOUND)
+
+    return response
+
+
+
+@users_router.get(
+    "/change_password", status_code=status.HTTP_200_OK
+)
+async def change_user_password(
+    request: Request,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    return templates.TemplateResponse(
+        "ChangePasswordPage.html",
+        {
+            "request": request,
+            "user": current_user,
+            "error": "",
+        },
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@users_router.post(
+    "/change_password", status_code=status.HTTP_200_OK
+)
+async def change_user_password(
+    request: Request,
+    old_password: str = Form(...),
+    new_password: str = Form(...),
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+
+
+    try:
+        UserRegistration.model_fields['password'].validate(new_password, {}, loc='new_password')
+    except ValidationError as e:
+
+        # Better approach: add this to validation_exception_handler
+        return templates.TemplateResponse(
+            "ChangePasswordPage.html",
+            {
+                "request": request,
+                "user": current_user,
+                "error": "New password must be 3 chars long",
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    user_repo = UserRepository(db)
+
+    row = await user_repo.get_user_by_id(current_user.user_id)
+
+    if (
+            not row
+            or not row["hashed_password"]
+            or not verify_password(old_password, row["hashed_password"])
+    ):
+        return templates.TemplateResponse(
+            "ChangePasswordPage.html",
+            {
+                "request": request,
+                "user": current_user,
+                "error": "Incorrect old password",
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    await user_repo.change_password(current_user.user_id, get_password_hash(new_password))
+    query = urlencode({"updated": "true"})
+
+    response = RedirectResponse(url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND)
 
     return response
 
@@ -100,7 +173,7 @@ async def log_in(
             "AuthorizationPage.html",
             {
                 "request": request,
-                "error_message": "Incorrect username or password",
+                "error": "Incorrect username or password",
             },
             status_code=status.HTTP_401_UNAUTHORIZED,
         )

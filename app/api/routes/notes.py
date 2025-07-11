@@ -185,7 +185,7 @@ async def get_todos_analytics(
     try:
         ZoneInfo(timezone)
     except ZoneInfoNotFoundError:
-        raise HTTPException(status_code=400, detail="Invalid timezone")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid timezone")
 
     repo = NoteRepository(db)
     total, status_counts, avg_time, weekday_raw = await repo.get_analytics(timezone)

@@ -120,6 +120,10 @@ async def user_validation_error_handler(
             url=f"/users/profile?{query}", status_code=status.HTTP_302_FOUND
         )
 
+    if request.url.path == "/users/change_password":
+        return RedirectResponse(
+            url=f"/users/change_password?{query}", status_code=status.HTTP_302_FOUND
+        )
 
 async def not_found_handler(request: Request, exc: HTTPException):
     print("Got exception:")

@@ -30,8 +30,8 @@
         </div>
     </form>
 
-    {% if error_message %}
-        <p class="authorizationError">{{ error_message }}</p>
+    {% if error %}
+        <p class="authorizationError">{{ error }}</p>
 
     {% elif created %}
         <p style="color: green; text-align: center;">User successfully created!</p>

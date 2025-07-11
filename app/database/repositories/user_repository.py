@@ -57,6 +57,16 @@ class UserRepository:
             username,
         )
 
+    async def get_user_by_id(self, id: int):
+        return await self.db.fetchrow(
+            """
+            SELECT username, hashed_password
+            FROM users
+            WHERE id = $1
+            """,
+            id,
+        )
+
     async def get_user_roles_by_id(self, user_id: int) -> Optional[UserRole]:
         row = await self.db.fetchrow(
             """
@@ -149,3 +159,19 @@ class UserRepository:
             role,
         )
         return result != "DELETE 0"
+
+
+    async def change_password(self, user_id: int, new_password: str):
+        result = await self.db.execute(
+            """
+            UPDATE users
+            SET hashed_password = $2
+            WHERE id = $1
+            """,
+            user_id,
+            new_password,
+        )
+        return result
+    
+
+
