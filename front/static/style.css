@@ -508,6 +508,19 @@ table {
     color: var(--bs-table-color-state,var(--bs-table-color-type,var(--bs-table-color)));
     background-color: var(--bs-table-bg);
 }
+
+.noteActionContainer {
+    display: flex;
+    gap: 8px; /* расстояние между кнопками */
+    justify-content: center;
+    align-items: center;
+}
+
+.noteActionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .navB{
     box-sizing: initial;
     line-height: initial;
@@ -519,6 +532,57 @@ table {
     font-size: 12px;
     color: red;
     font-family: "Montserrat", system-ui;
+}
+
+
+.noteActionButton {
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100px;
+    height: 35px;
+    font-weight: 600;
+    color: white;
+    border: none;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.5);
+}
+
+.noteActionButton.complete {
+    background-color: #41BA21;
+}
+
+.noteActionButton.complete:hover {
+    background-color: #3EAE21;
+    cursor: pointer;
+}
+
+.noteActionButton.delete {
+    background-color: #D84315;
+}
+
+.noteActionButton.delete:hover {
+    background-color: #BF360C;
+    cursor: pointer;
+}
+
+.addButton {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: #5AD8D8;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 32px;
+    font-weight: bold;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.3);
+    transition: background-color 0.3s ease;
+}
+
+.addButton:hover {
+    background-color: #59C4C4FF;
+    cursor: pointer;
 }
 
 /* Document

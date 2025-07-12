@@ -13,6 +13,7 @@
             <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
         </div>
     </header>
+
     {% include "navigationBar.html" %}
 
     <div class="hint">
@@ -28,6 +29,7 @@
                         <th>Description</th>
                         <th>Created</th>
                         <th>Status</th>
+                        <th></th> <!-- For delete button -->
                     </tr>
                 </thead>
                 <tbody>
@@ -40,9 +42,23 @@
                             {% if todo.completed %}
                                 ✅ Done
                             {% else %}
-                                ⏳ In progress
+                                ⌛ In progress
                             {% endif %}
                         </td>
+                        <td>
+                            <div class="noteActionContainer">
+                                <form method="post" action="/notes/complete_note/{{ todo.id }}">
+                                    <button class="noteActionButton complete" type="submit"
+                                            {% if todo.completed %} disabled {% endif %}>
+                                        ✅ Done
+                                    </button>
+                                </form>
+                                <form method="post" action="/notes/delete_note/{{ todo.id }}">
+                                    <button class="noteActionButton delete" type="submit">❌ Delete</button>
+                                </form>
+                            </div>
+                        </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -51,5 +67,10 @@
             <p style="text-align:center; font-size:16px;">You don’t have any notes yet.</p>
         {% endif %}
     </div>
+
+    <a href="/notes/create_note">
+        <button class="addButton">+</button>
+    </a>
+
 </body>
 </html>

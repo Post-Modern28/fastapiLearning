@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Note</title>
+    {% include "headlinks.html" with context %}
+</head>
+<body>
+    <header>
+        <div class="shapka">
+            <div><img class="LeftImage" src="{{ url_for('static', path='img/BlackUniLogoRectangle.png') }}"></div>
+            <div><img class="RightImage" src="{{ url_for('static', path='img/InnologoBlack.png') }}"></div>
+        </div>
+    </header>
+    {% include "navigationBar.html" %}
+
+    <form method="post" action="/notes/create_note" class="authorizationWindow" style="height: auto; padding: 20px">
+        <div class="innerAuthWind" style="height: auto; gap: 10px">
+            <h2 style="margin-bottom: 10px; font-family: 'Outfit', sans-serif;">Create New Note</h2>
+            <input name="title" class="authorizationBar" placeholder="Title" required>
+            <textarea name="description" class="authorizationBar" placeholder="Description" style="height: 100px;" required></textarea>
+            <button type="submit" class="logInButton">Create</button>
+        </div>
+    </form>
+
+    {% if error %}
+        <p style="color: red; text-align: center;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>

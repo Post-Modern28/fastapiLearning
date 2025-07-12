@@ -4,8 +4,8 @@ from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Form
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.api.schemas.models import RoleEnum, Todo, TodoReturn, UserRole
 from app.common.templates import templates
@@ -18,17 +18,35 @@ from app.security.security import get_current_user_with_roles
 
 todo_router = APIRouter(prefix="/notes", tags=["Notes"])
 
-
-@todo_router.post("/create_note", status_code=status.HTTP_201_CREATED)
+@todo_router.get("/create_note", status_code=status.HTTP_201_CREATED)
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
 async def create_note(
-    note: Todo,
+    request: Request,
     current_user: UserRole = Depends(get_current_user_with_roles),
     db: asyncpg.Connection = Depends(get_db_connection),
 ):
     repo = NoteRepository(db)
-    row = await repo.create_note(note.title, note.description, current_user.user_id)
-    return {"message": "Note created", "item": TodoReturn(**row)}
+    return templates.TemplateResponse(
+        "NewNote.html",
+        {
+            "request": request,
+            "user": current_user,
+        },
+    )
+
+
+
+@todo_router.post("/create_note", status_code=status.HTTP_201_CREATED)
+@PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
+async def create_note(
+    title: str = Form(...),
+    description: str = Form(...),
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    repo = NoteRepository(db)
+    row = await repo.create_note(title, description, current_user.user_id)
+    return RedirectResponse("/notes/my_notes", status_code=status.HTTP_302_FOUND)
 
 
 @todo_router.get("/my_notes", status_code=status.HTTP_200_OK)
@@ -177,7 +195,7 @@ async def complete_notes(
     return {"updated_count": int(num)}
 
 
-@todo_router.get("/notes/analytics")
+@todo_router.get("/analytics")
 async def get_todos_analytics(
     timezone: str = Query("Europe/Moscow"),
     db: asyncpg.Connection = Depends(get_db_connection),

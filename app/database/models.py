@@ -6,7 +6,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     String,
-    UniqueConstraint,
+    UniqueConstraint, Boolean, text, func
 )
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -74,8 +74,17 @@ class Todo(Base):
     description: Mapped[str] = mapped_column(String(500))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
-    completed: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    completed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false")
+    )
+
+
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False,
+        server_default=func.now()
+    )
     completed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     user = relationship("User", back_populates="todos")
