@@ -47,13 +47,13 @@
                         </td>
                         <td>
                             <div class="noteActionContainer">
-                                <form method="post" action="/notes/complete_note/{{ todo.id }}">
+                                <form method="post" action="/notes/complete/{{ todo.id }}">
                                     <button class="noteActionButton complete" type="submit"
                                             {% if todo.completed %} disabled {% endif %}>
                                         ✅ Done
                                     </button>
                                 </form>
-                                <form method="post" action="/notes/delete_note/{{ todo.id }}">
+                                <form method="post" action="/notes/delete/{{ todo.id }}">
                                     <button class="noteActionButton delete" type="submit">❌ Delete</button>
                                 </form>
                             </div>

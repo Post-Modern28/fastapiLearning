@@ -38,6 +38,18 @@ class NoteRepository:
     async def delete_note(self, note_id: int):
         return await self.db.execute("DELETE FROM things_to_do WHERE id = $1", note_id)
 
+    async def complete_note(
+        self, note_id: int,
+    ):
+        return await self.db.execute(
+            """
+            UPDATE things_to_do
+            SET completed=true, completed_at=CURRENT_TIMESTAMP
+            WHERE id = $1
+            """,
+            note_id,
+        )
+
     async def update_note(
         self, note_id: int, title: str, description: str, completed: bool
     ):

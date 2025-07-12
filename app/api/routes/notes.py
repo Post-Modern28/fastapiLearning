@@ -147,7 +147,8 @@ async def get_note_by_id(
     return TodoReturn(**dict(row))
 
 
-@todo_router.delete("/delete_note/{note_id}")
+@todo_router.post("/delete/{note_id}")
+@todo_router.delete("/delete/{note_id}")
 @PermissionChecker([RoleEnum.ADMIN, RoleEnum.USER])
 @OwnershipChecker()
 async def delete_note(
@@ -161,7 +162,7 @@ async def delete_note(
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"message": "Item not found"}
         )
-    return {"message": "Item successfully deleted!"}
+    return RedirectResponse("/notes/my_notes", status_code=status.HTTP_302_FOUND)
 
 
 @todo_router.put("/update_note/{note_id}")
@@ -181,6 +182,19 @@ async def update_note(
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND, content={"message": "Item not found."}
     )
+
+@todo_router.post("/complete/{note_id}")
+@OwnershipChecker()
+async def complete_note(
+    note_id: int,
+    current_user: UserRole = Depends(get_current_user_with_roles),
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+    repo = NoteRepository(db)
+    result = await repo.complete_note(note_id)
+
+    return RedirectResponse("/notes/my_notes", status_code=status.HTTP_302_FOUND)
+
 
 
 @todo_router.patch("/complete_notes")
