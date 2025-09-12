@@ -15,7 +15,7 @@ _Сравнение с метриками из статьи:_
  Был заметен тренд на переобчуение модели (падение метрик на эпохах > 60)
 
  _Пример сгенерированных и реальных изображений_  
-| IHC | HER2_Gen | HER2_Real |
+| H&E | HER2_Gen | HER2_Real |
 |-----|----------|-----------|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/bd1d6a1c-7b1d-409c-a71a-903c9672ac84" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/e927e1c8-440d-48e9-b071-525d8905f45d" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/32c40ac2-bde1-43c0-99cf-551fde16fd54" />|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/7fe99d6b-4fc3-42b7-a1cb-325a49c0d728" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/0e3403bc-23e1-47db-8217-833b429701be" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/9c67e3b9-76ef-4609-b879-ed09f77f2323" />|
@@ -25,7 +25,7 @@ _Сравнение с метриками из статьи:_
 
 ---
 
-### 🔹 PPT
+### 🔹 PPT (MICCAI 2024)
 **Датасет:** PAX5  
 - SSIM: **0.2469**  
 - PSNR: **12.8244**  
@@ -40,7 +40,7 @@ _Сравнение с метриками из статьи:_
 Возможно, сжатие эталонных изображений могло бы дать другие метрики.
 
  _Пример сгенерированных и реальных изображений_  
-| IHC | HER2_Gen | HER2_Real |
+| H&E | HER2_Gen | HER2_Real |
 |-----|----------|-----------|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/6fe21182-07d8-4d25-8aec-029ccec17395" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/f1710028-b44d-41d1-8497-ce184d117094" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/2903c3c1-62cf-432b-99a6-15e21c03fc99" />|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/8cd2a92c-e5b4-436c-afbc-7fc5b6764d95" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/edeb5f74-8cda-4a40-a503-bbb7c1e5eb17" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/04d4c654-91a5-46e6-97fa-c30430681aa0" />|
@@ -52,7 +52,7 @@ _Сравнение с метриками из статьи:_
 
 ---
 
-### 🔹 Adaptive Supervised PatchNCE (NCE)
+### 🔹 Adaptive Supervised PatchNCE (NCE) (MICCAI 2023)
 **Датасет:** MIST (папка HER2)  
 
 
@@ -72,7 +72,7 @@ _Сравнение с метриками из статьи:_
 > Наши результаты очень похожи на заявленные.  
 
  _Пример сгенерированных и реальных изображений_  
-| IHC | HER2_Gen | HER2_Real |
+| H&E | HER2_Gen | HER2_Real |
 |-----|----------|-----------|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/397bb978-efd2-4a63-ba03-31a10cc93549" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/d9f9e0b6-acfe-423d-b6eb-c2bb53ccaea5" /> | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/8284216f-7ce9-4d07-b199-bc8fa33ac11f" />|
 | <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/22726c95-0ca2-4a2c-9077-c9dd0ac2e615" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/6e7c6fc4-30d0-486e-be46-1f24c9d60210" />| <img width="4096" height="4096" alt="image" src="https://github.com/user-attachments/assets/f73b8085-6ccf-4282-a888-c088f5207967" />|
