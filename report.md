@@ -11,6 +11,28 @@
 
 * Было произведено обучение модели из статьи PSPStain https://arxiv.org/pdf/2407.03655 . Обучение проводилось на датасете **MIST**. Метрики PSNR и SSIM, указанные в статье, были достигнуты (SSIM **0.198** при заявленных **0.187**, PSNR **14.31** при заявленных **14.19**)
 
+UPD: примеры работы PSPStain (датасет MIST)
+
+| H&E | HER2_Gen | HER2_Real |
+|-----|----------|-----------|
+|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/171f1983-7ade-4fc6-af35-d9b0ae9b9bd9" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/17c73a02-0482-46fd-a170-422124425e61" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/cda99b2c-dce4-48df-89d5-ecfde35288f0" />|
+|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/ab36eff0-9485-4b46-a52a-02baf45992c8" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/97d6b351-bd46-4d7a-ac6e-fc3c1bd8f868" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/fe4d5cdc-15f2-4b42-8641-5d99dc6bd738" />|
+|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/09790256-e999-4da3-92c0-652bcd4b3a59" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/178ea1a3-cecc-4ae5-bfcf-ea54fcfccc81" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/d0ba0ff3-fe34-48d2-8f4e-09a32cf22d59" />|
+|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/895fd3d8-3811-496d-87a8-78f16525b494" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/c01e8133-d276-4912-8354-d7d6be02f8c1" />|<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/72216ac0-e606-4374-84ac-3041338467e3" />|
+
+
+
+
+
+
+
+
+
+
+
+
+https://jupyter-zh.skoltech.ru/hub/user-redirect/lab/tree/benchmarking/PSPStain/results/MIST/val_pretrained/images
+
 * Ниже обновлённый репорт за предыдущие недели (добавлено небольшое описание моделей с вырезками из статьи и инструкции по воспроизведению экспериментов (в данный момент не получится воспроизвести, т.к. требуется перенос виртуальной среды Conda на общую среду Zhores)
 ---
 
