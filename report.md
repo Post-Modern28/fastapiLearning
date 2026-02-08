@@ -238,6 +238,7 @@ cat logs/eval_nce_cascade_{job_num}.out
 | **PPT**                | MIST      | 14.5179 | 0.1920  | 50.44 | 0.016 | 0.539 | 0.267 |
 | **NCE**                | MIST      | 14.54   | 0.2161  | 66.01 | 0.030 | 0.535 | 0.271 |
 | **PSPStain**           | MIST      | 14.3160 | 0.1983  | 46.93 | 0.012 | 0.545 | 0.252 |
+| **PSPStain filtered**  | MIST      | 14.2686 | 0.1808  | 48.12 | 0.009 | 0.534 | 0.264 |
 | **TDKstain (epoch 27)**| MIST      | 14.5848 | 0.1991  | 83.15 | 0.043 | 0.551 | 0.278 |
 
 ## PSPStain
@@ -291,7 +292,10 @@ cat logs/eval_nce_cascade_{job_num}.out
 | **PPT**                | MIST good     | 17.4690 | 0.2534  | 200.39 | 0.012 | 0.447 | 0.229 |
 | **NCE**                | MIST good     | 17.2198 | 0.2584  | 261.42 | 0.079 | 0.462 | 0.239 |
 | **PSPStain**           | MIST good     | 16.8576 | 0.2442  | 241.22 | 0.041 | 0.462 | 0.265 |
+| **PSPStain filtered**  | MIST good     | 17.1747 | 0.2257  | 234.83 | 0.047 | 0.448 | 0.261 |
 | **TDKstain (epoch 27)**| MIST good     | 17.6280 | 0.2526 | 249.1 | 0.084  | 0.488 | 0.279 |
+
+
 
 ## Norm
 | Модель                 | Датасет   | PSNR ↑  | SSIM ↑  | FID ↓ | KID ↓ | LPIPS ↓| DISTS ↓ |
@@ -300,6 +304,7 @@ cat logs/eval_nce_cascade_{job_num}.out
 | **PPT**                | MIST norm    | 15.3937 | 0.2037  | 123.55 | 0.019 | 0.503 | 0.246 |
 | **NCE**                | MIST norm    | 15.1420 | 0.2152  | 120.16 | 0.011 | 0.503 | 0.232 |
 | **PSPStain**           | MIST norm    | 15.2694 | 0.2051  | 113.44 | 0.008 | 0.508 | 0.240 |
+| **PSPStain filtered**  | MIST norm    | 15.0952 | 0.1883  | 109.71 | 0.004 | 0.496 | 0.248 |
 | **TDKstain (epoch 27)**| MIST norm    | 15.4952 | 0.2096  | 145.8  | 0.044 | 0.526 | 0.259 |
 
 ## Comb
@@ -309,6 +314,7 @@ cat logs/eval_nce_cascade_{job_num}.out
 | **PPT**                | MIST comb | 15.5965 | 0.2086  | 117.94 | 0.019 | 0.498 | 0.245 |
 | **NCE**                | MIST comb | 15.3450 | 0.2194  | 118.20 | 0.015 | 0.500 | 0.233 |
 | **PSPStain**           | MIST comb | 15.4246 | 0.2090  | 109.74 | 0.009 | 0.504 | 0.243 |
+| **PSPStain filtered**  | MIST comb | 15.2985 | 0.1919  | 104.93 | 0.004 | 0.492 | 0.250 |
 | **TDKstain (epoch 27)**| MIST comb | 15.7037 | 0.2138  | 142.6  | 0.046 | 0.522 | 0.261 |
 ---
 
