@@ -302,7 +302,7 @@ cat logs/eval_nce_cascade_{job_num}.out
 | **NCE filtered 25%**                  | MIST norm    | 14.5526 | 0.1893  | 135.72 | 0.030 | 0.519  | 0.237 |
 | **NCE 60 epochs**                     | MIST norm    | 14.9345 | 0.1984  | 108.34 | 0.006 | 0.497  | 0.236 |
 | **NCE 60 epochs filtered 15%**        | MIST norm    | 15.3082 | 0.2047  | 116.54 | 0.011 | 0.511  | 0.228 |
-| **NCE 60 epochs filtered 15%**        | MIST norm    | 15.0847 | 0.2075  | 113.92 | 0.010 | 0.497  | 0.222 |
+| **NCE 60 epochs filtered 25%**        | MIST norm    | 15.0847 | 0.2075  | 113.92 | 0.010 | 0.497  | 0.222 |
 | **PSPStain**                          | MIST norm    | 15.2694 | 0.2051  | 113.44 | 0.008 | 0.508  | 0.240 |
 | **PSPStain filtered 15%**             | MIST norm    | 15.2630 | 0.2021  | 112.43 | 0.008 | 0.491  | 0.234 |
 | **PSPStain filtered 25%**             | MIST norm    | 15.0952 | 0.1883  | 109.71 | 0.004 | 0.496  | 0.248 |
